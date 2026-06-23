@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mecânica do Carlim - Sistema de Gestão</title>
+  <title>Mecânica do Carlim - Sistema de Gestão ERP</title>
   <!-- Tailwind CSS via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Importação Oficial e Direta do jsPDF (Garante que a biblioteca de PDF seja carregada globalmente) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
+  <script src="jspdf.umd.min.js"></script>
   <!-- IMPORTAÇÃO DO GOOGLE FIREBASE SDK (Modo Compatibilidade) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -102,395 +101,567 @@
     </div>
   </div>
 
-  <!-- CONTAINER DO APLICATIVO MÓVEL -->
-  <div class="w-full max-w-md bg-white shadow-2xl min-h-screen flex flex-col relative overflow-x-hidden hidden no-print" id="app-container">
+  <!-- CONTAINER DO APLICATIVO ERP DESKTOP -->
+  <div class="w-full min-h-screen flex bg-slate-50 relative hidden no-print" id="app-container">
     
-    <!-- HEADER FIXO -->
-    <header class="flex items-center justify-between px-4 py-4 border-b border-slate-100">
-      <div class="flex items-center gap-2 cursor-pointer" onclick="switchScreen('dashboard')">
-        <svg class="w-8 h-8 text-[#0056b3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-        </svg>
-        <span class="text-2xl font-black text-[#0f2942] tracking-tight">Mecânica do <span class="text-[#0056b3]">Carlim</span></span>
-      </div>
-      <div class="flex items-center gap-3">
-        <button onclick="handleLogout()" class="text-xs text-red-500 font-bold hover:underline">Sair</button>
-        <span class="text-[10px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded-full">Oficina</span>
-      </div>
-    </header>
-
-    <!-- BANNER DE SAUDAÇÃO -->
-    <section class="bg-[#0056b3] text-white px-4 py-5 flex justify-between items-center">
-      <div>
-        <h1 class="text-lg font-bold">Painel do Carlim</h1>
-        <p class="text-[11px] text-blue-200">Saldo do Caixa: <span id="dashboard-balance" class="font-bold">R$ 0,00</span></p>
-      </div>
-      <div class="bg-white/15 px-3 py-1 rounded-lg text-xs font-semibold">
-        <span id="active-os-counter">0</span> OS Ativas
-      </div>
-    </section>
-
-    <!-- ==================== TELA 1: DASHBOARD ==================== -->
-    <main id="screen-dashboard" class="flex-1 flex flex-col">
-      <section class="p-4 grid grid-cols-2 gap-3">
-        <!-- OS -->
-        <button onclick="switchScreen('os-list')" class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-blue-400 transition shadow-sm">
-          <div class="text-[#0056b3] mb-2">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-            </svg>
-          </div>
-          <span class="text-xs font-bold text-slate-700">Ordens de Serviço</span>
-        </button>
-
-        <!-- Clientes e Veículos -->
-        <button onclick="switchScreen('clients')" class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-blue-400 transition shadow-sm">
-          <div class="text-[#0056b3] mb-2">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-            </svg>
-          </div>
-          <span class="text-xs font-bold text-slate-700">Clientes & Carros</span>
-        </button>
-
-        <!-- Orçamentos -->
-        <button onclick="switchScreen('quotes-list')" class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-blue-400 transition shadow-sm">
-          <div class="text-[#0056b3] mb-2">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-            </svg>
-          </div>
-          <span class="text-xs font-bold text-slate-700">Orçamentos</span>
-        </button>
-
-        <!-- Histórico por Placa -->
-        <button onclick="switchScreen('history')" class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-blue-400 transition shadow-sm">
-          <div class="text-[#0056b3] mb-2">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <span class="text-xs font-bold text-slate-700">Histórico por Placa</span>
-        </button>
-
-        <!-- Caixa Financeiro -->
-        <button onclick="switchScreen('finance')" class="bg-white border border-slate-200 rounded-xl p-4 flex flex-col items-center justify-center text-center hover:border-blue-400 transition shadow-sm col-span-2">
-          <div class="text-[#0056b3] mb-2">
-            <svg class="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <span class="text-xs font-bold text-slate-700">Fluxo de Caixa</span>
-        </button>
-      </section>
-
-      <!-- Divisor de OS -->
-      <section class="px-4 py-2 flex items-center justify-between border-t border-slate-100 bg-slate-50/50">
-        <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ordens de Serviço Ativas</h3>
-        <button onclick="switchScreen('os-list')" class="text-xs text-blue-600 font-bold hover:underline">Ver todas &rarr;</button>
-      </section>
-
-      <!-- Lista de Monitoramento das OS -->
-      <section id="dashboard-os-list" class="p-4 space-y-3 flex-1">
-        <!-- Preenchido dinamicamente -->
-      </section>
-    </main>
-
-    <!-- ==================== TELA 2: CLIENTES & VEÍCULOS ==================== -->
-    <main id="screen-clients" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Clientes & Veículos</h2>
-      </div>
-
-      <!-- Formulário de Cadastro -->
-      <form id="form-client" class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 space-y-2">
-        <h3 class="text-xs font-bold text-slate-700 uppercase">Novo Cadastro</h3>
-        <input type="text" id="client-name" placeholder="Nome Completo" required class="w-full text-xs p-2 border border-slate-300 rounded focus:border-blue-500 outline-none">
-        <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="client-phone" placeholder="WhatsApp (DDD + Número)" required class="w-full text-xs p-2 border border-slate-300 rounded focus:border-blue-500 outline-none">
-          <input type="text" id="client-plate" placeholder="Placa" required class="w-full text-xs p-2 border border-slate-300 rounded uppercase focus:border-blue-500 outline-none">
+    <!-- BARRA LATERAL (SIDEBAR PERSISTENTE) -->
+    <aside class="w-64 bg-slate-900 text-slate-200 flex flex-col justify-between shrink-0 border-r border-slate-800 no-print">
+      <div class="flex flex-col">
+        <!-- Brand / Header da Sidebar -->
+        <div class="flex items-center gap-3 px-6 py-5 border-b border-slate-800 cursor-pointer" onclick="switchScreen('dashboard')">
+          <svg class="w-8 h-8 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          </svg>
+          <span class="text-lg font-black tracking-tight text-white">Mecânica do <span class="text-blue-500">Carlim</span></span>
         </div>
-        <div class="grid grid-cols-3 gap-2">
-          <input type="text" id="client-car-brand" placeholder="Marca" required class="w-full text-xs p-2 border border-slate-300 rounded focus:border-blue-500 outline-none">
-          <input type="text" id="client-car-model" placeholder="Modelo" required class="w-full text-xs p-2 border border-slate-300 rounded focus:border-blue-500 outline-none">
-          <input type="text" id="client-car-year" placeholder="Ano" required class="w-full text-xs p-2 border border-slate-300 rounded focus:border-blue-500 outline-none">
-        </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2 rounded transition">Salvar Cliente</button>
-      </form>
-
-      <div class="space-y-2" id="clients-list-container"></div>
-    </main>
-
-    <!-- ==================== TELA 3: ORDENS DE SERVIÇO ==================== -->
-    <main id="screen-os-list" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Ordens de Serviço</h2>
-      </div>
-
-      <!-- Abas de Filtros de Status -->
-      <div class="flex border-b border-slate-200 mb-3 text-xs">
-        <button onclick="filterOS('todas')" class="flex-1 pb-2 font-bold border-b-2 border-blue-600 text-blue-600 text-center" id="tab-os-todas">Todas</button>
-        <button onclick="filterOS('aberta')" class="flex-1 pb-2 text-slate-500 text-center" id="tab-os-aberta">Em Aberto</button>
-        <button onclick="filterOS('funcionamento')" class="flex-1 pb-2 text-slate-500 text-center" id="tab-os-funcionamento">No Conserto</button>
-        <button onclick="filterOS('concluida')" class="flex-1 pb-2 text-slate-500 text-center" id="tab-os-concluida">Prontas</button>
-      </div>
-
-      <div id="os-list-container" class="space-y-3"></div>
-    </main>
-
-    <!-- ==================== TELA 4: DETALHES DE OS ==================== -->
-    <main id="screen-os-detail" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('os-list')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Acompanhamento OS</h2>
-      </div>
-
-      <div id="os-detail-card" class="space-y-4"></div>
-    </main>
-
-    <!-- ==================== TELA 5: LISTAGEM DE ORÇAMENTOS ==================== -->
-    <main id="screen-quotes-list" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-3">
-        <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Orçamentos</h2>
-      </div>
-
-      <button onclick="switchScreen('quote-creator')" class="w-full bg-[#0056b3] text-white py-2 rounded-xl text-xs font-bold mb-4 shadow hover:bg-blue-700 transition flex items-center justify-center gap-1.5">
-        + Criar Novo Orçamento
-      </button>
-
-      <div id="quotes-pipeline-container" class="space-y-3"></div>
-    </main>
-
-    <!-- ==================== TELA 6: GERADOR DE ORÇAMENTOS ==================== -->
-    <main id="screen-quote-creator" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('quotes-list')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Montar Orçamento</h2>
-      </div>
-
-      <div class="space-y-3">
-        <div>
-          <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Selecione o Cliente</label>
-          <select id="quote-select-client" class="w-full text-xs p-2 border border-slate-300 rounded bg-white"></select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <!-- MÉTODO DE PAGAMENTO -->
-          <div>
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Método de Pagamento</label>
-            <select id="quote-select-payment" class="w-full text-xs p-2.5 border border-slate-300 rounded bg-white">
-              <option value="pix">PIX</option>
-              <option value="dinheiro">Dinheiro / Espécie</option>
-              <option value="credito">Cartão de Crédito</option>
-              <option value="debito">Cartão de Débito</option>
-            </select>
-          </div>
-          <!-- CAMPO DO ODÔMETRO (KM) -->
-          <div>
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Odômetro (KM de entrada)</label>
-            <input type="number" id="quote-odometer" placeholder="Ex: 15420" class="w-full text-xs p-2.5 border border-slate-300 rounded bg-white outline-none">
-          </div>
-        </div>
-
-        <!-- NOVO: VISTORIA DE ENTRADA (CHECKLIST) -->
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">Vistoria de Entrada (Laudo)</h3>
-          
-          <div class="mb-2">
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nível de Combustível</label>
-            <select id="quote-fuel" class="w-full text-xs p-2 border border-slate-300 rounded bg-white">
-              <option value="vazio">Reserva / Vazio</option>
-              <option value="1/4">1/4 de Tanque</option>
-              <option value="1/2" selected>1/2 de Tanque</option>
-              <option value="3/4">3/4 de Tanque</option>
-              <option value="cheio">Tanque Cheio</option>
-            </select>
-          </div>
-
-          <div class="grid grid-cols-2 gap-2 text-xs text-slate-700">
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-lataria" class="rounded border-slate-300">
-              <span>Lataria sem riscos</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-estepe" class="rounded border-slate-300">
-              <span>Estepe presente</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-ferramentas" class="rounded border-slate-300">
-              <span>Macaco e chaves</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-triangulo" class="rounded border-slate-300">
-              <span>Triângulo presente</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-luzes" class="rounded border-slate-300">
-              <span>Luzes e piscas OK</span>
-            </label>
-            <label class="flex items-center gap-1.5 cursor-pointer">
-              <input type="checkbox" id="quote-chk-radio" class="rounded border-slate-300">
-              <span>Som/Rádio presente</span>
-            </label>
-          </div>
-
-          <div class="mt-2">
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Observações da Vistoria</label>
-            <input type="text" id="quote-inspection-notes" placeholder="Ex: Risco no paralama esquerdo..." class="w-full text-xs p-2 border border-slate-300 rounded outline-none bg-white">
-          </div>
-        </div>
-
-        <div>
-          <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Solicitação Inicial do Cliente</label>
-          <input type="text" id="quote-problem-desc" placeholder="Ex: Motor vazando óleo..." class="w-full text-xs p-2 border border-slate-300 rounded">
-        </div>
-
-        <!-- Serviços -->
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">Serviços e Mão de Obra</h3>
-          <div class="flex gap-1 mb-2">
-            <input type="text" id="quote-service-desc" placeholder="Ex: Substituição de relação" class="flex-1 text-xs p-1.5 border border-slate-300 rounded">
-            <input type="number" id="quote-service-price" placeholder="R$ Unit" class="w-20 text-xs p-1.5 border border-slate-300 rounded">
-            <button onclick="addQuoteItem('service')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 rounded font-bold">+</button>
-          </div>
-          <ul id="quote-services-list" class="text-xs space-y-1 divide-y divide-slate-100"></ul>
-        </div>
-
-        <!-- Peças -->
-        <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
-          <h3 class="text-xs font-bold text-slate-700 uppercase mb-2">Peças Substituídas</h3>
-          <div class="flex gap-1 mb-2">
-            <input type="text" id="quote-part-desc" placeholder="Ex: Kit de Relação Cobreq" class="flex-1 text-xs p-1.5 border border-slate-300 rounded">
-            <input type="number" id="quote-part-price" placeholder="R$ Unit" class="w-16 text-xs p-1.5 border border-slate-300 rounded">
-            <input type="number" id="quote-part-qty" placeholder="Qtd" value="1" class="w-12 text-xs p-1.5 border border-slate-300 rounded text-center">
-            <button onclick="addQuoteItem('part')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-2.5 rounded font-bold">+</button>
-          </div>
-          <ul id="quote-parts-list" class="text-xs space-y-1 divide-y divide-slate-100"></ul>
-        </div>
-
-        <div class="flex items-center justify-between font-black text-sm text-slate-800 bg-slate-100 p-2 rounded">
-          <span>VALOR ESTIMADO:</span>
-          <span id="quote-total-preview">R$ 0,00</span>
-        </div>
-
-        <button onclick="saveAndPipelineQuote()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl transition shadow">
-          Salvar no Panel de Orçamentos
-        </button>
-      </div>
-    </main>
-
-    <!-- ==================== TELA 7: FLUXO DE CAIXA ==================== -->
-    <main id="screen-finance" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Fluxo de Caixa</h2>
-      </div>
-
-      <!-- Balanço Financeiro -->
-      <div class="grid grid-cols-2 gap-2 mb-4">
-        <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl">
-          <span class="text-[9px] font-bold text-emerald-800 uppercase block">Total de Entradas</span>
-          <span id="finance-inflows" class="text-sm font-black text-emerald-700">R$ 0,00</span>
-        </div>
-        <div class="bg-red-50 border border-red-200 p-3 rounded-xl">
-          <span class="text-[9px] font-bold text-red-800 uppercase block">Total de Saídas</span>
-          <span id="finance-outflows" class="text-sm font-black text-red-700">R$ 0,00</span>
-        </div>
-      </div>
-
-      <!-- Lançar Saída Manual -->
-      <form id="form-expense" class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 space-y-2">
-        <h3 class="text-xs font-bold text-slate-700 uppercase">Lançar Despesa Manual</h3>
-        <div class="flex gap-2">
-          <input type="text" id="expense-desc" placeholder="Ex: Energia, Aluguel..." required class="flex-1 text-xs p-2 border border-slate-300 rounded">
-          <input type="number" id="expense-value" placeholder="Valor" required class="w-24 text-xs p-2 border border-slate-300 rounded">
-        </div>
-        <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2 rounded transition">Registrar Saída</button>
-      </form>
-
-      <!-- Botão para Resetar o Caixa -->
-      <button onclick="resetFinance()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-2 rounded-xl transition mb-4">
-        Zerar Histórico do Caixa
-      </button>
-
-      <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Histórico de Transações</h3>
-      <div id="finance-ledger" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
-    </main>
-
-    <!-- ==================== TELA 8: HISTÓRICO CLÍNICO POR PLACA ==================== -->
-    <main id="screen-history" class="flex-1 p-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold">&larr; Voltar</button>
-        <h2 class="text-sm font-black text-slate-800 uppercase">Histórico do Veículo</h2>
-      </div>
-
-      <!-- Barra de Busca por Placa -->
-      <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 mb-4 space-y-2">
-        <label class="text-[10px] font-bold text-slate-500 uppercase block">Digite a Placa para Buscar</label>
-        <div class="flex gap-2">
-          <input type="text" id="history-search-input" placeholder="Ex: XYZ1234" class="flex-1 text-xs p-2.5 border border-slate-300 rounded bg-white uppercase outline-none focus:border-blue-500 font-bold">
-          <button onclick="searchVehicleHistory()" class="bg-[#0056b3] text-white font-bold text-xs px-4 rounded-xl hover:bg-blue-700 transition">
-            Buscar
-          </button>
-        </div>
-      </div>
-
-      <!-- Resultados do Histórico -->
-      <div id="history-results" class="space-y-4">
-        <div class="text-center py-10 text-slate-400 text-xs">
-          Insira uma placa de veículo acima para consultar o histórico clínico de revisões.
-        </div>
-      </div>
-    </main>
-
-    <!-- MODAL DE EDIÇÃO DE CLIENTES -->
-    <div id="modal-edit-client" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
-      <div class="bg-white rounded-2xl p-4 w-full max-w-sm space-y-3">
-        <h3 class="text-sm font-black text-slate-800 uppercase border-b pb-2">Editar Cliente & Carro</h3>
-        <input type="hidden" id="edit-client-id">
         
-        <div class="space-y-2">
-          <div>
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nome do Cliente</label>
-            <input type="text" id="edit-client-name" class="w-full text-xs p-2 border border-slate-300 rounded">
-          </div>
-          <div>
-            <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">WhatsApp</label>
-            <input type="text" id="edit-client-phone" class="w-full text-xs p-2 border border-slate-300 rounded">
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Marca</label>
-              <input type="text" id="edit-client-car-brand" class="w-full text-xs p-2 border border-slate-300 rounded">
-            </div>
-            <div>
-              <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Modelo</label>
-              <input type="text" id="edit-client-car-model" class="w-full text-xs p-2 border border-slate-300 rounded">
-            </div>
-          </div>
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Placa</label>
-              <input type="text" id="edit-client-plate" class="w-full text-xs p-2 border border-slate-300 rounded uppercase">
-            </div>
-            <div>
-              <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ano</label>
-              <input type="text" id="edit-client-car-year" class="w-full text-xs p-2 border border-slate-300 rounded">
-            </div>
-          </div>
-        </div>
-
-        <div class="flex gap-2 pt-2">
-          <button onclick="closeEditModal()" class="flex-1 bg-slate-200 text-slate-700 text-xs py-2 rounded-lg font-bold">Cancelar</button>
-          <button onclick="saveEditedClient()" class="flex-1 bg-[#0056b3] text-white text-xs py-2 rounded-lg font-bold">Salvar Alterações</button>
-        </div>
+        <!-- Links de Navegação -->
+        <nav class="p-4 space-y-1">
+          <button onclick="switchScreen('dashboard')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M4 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2H6a2 2 0 01-2-2v-4zM14 16a2 2 0 012-2h2a2 2 0 012 2v4a2 2 0 01-2 2h-2a2 2 0 01-2-2v-4z"/></svg>
+            Painel Geral
+          </button>
+          <button onclick="switchScreen('os-list')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            Ordens de Serviço
+          </button>
+          <button onclick="switchScreen('clients')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+            Clientes & Carros
+          </button>
+          <button onclick="switchScreen('quotes-list')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            Orçamentos
+          </button>
+          <button onclick="switchScreen('history')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            Histórico por Placa
+          </button>
+          <button onclick="switchScreen('finance')" class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition">
+            <svg class="w-5 h-5 text-blue-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            Fluxo de Caixa
+          </button>
+        </nav>
       </div>
-    </div>
+      
+      <!-- Footer da Sidebar (Infos do Usuário / Sair) -->
+      <div class="p-4 border-t border-slate-800">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-[10px] bg-emerald-950 text-emerald-400 font-bold px-2 py-0.5 rounded-full uppercase">Oficina Ativa</span>
+          <span class="text-[10px] text-slate-400 font-medium">ERP v2.0</span>
+        </div>
+        <button onclick="handleLogout()" class="w-full bg-red-900/20 hover:bg-red-900/40 text-red-400 text-xs py-2 rounded-lg font-bold transition flex items-center justify-center gap-1.5">
+          <svg class="w-4 h-4 text-red-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          Sair do ERP
+        </button>
+      </div>
+    </aside>
 
-  </div>
+    <!-- ÁREA DE CONTEÚDO PRINCIPAL (WORKSPACE) -->
+    <div class="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      
+      <!-- TOP BAR DO DESKTOP -->
+      <header class="bg-white flex items-center justify-between px-8 py-4 border-b border-slate-100 shadow-sm no-print">
+        <div class="flex items-center gap-3">
+          <h2 class="text-slate-500 font-bold text-xs uppercase tracking-widest">Mecânica do Carlim - Sistema de Gestão Integrado</h2>
+        </div>
+        <div class="flex items-center gap-6">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs text-slate-500 font-medium">Firebase Sincronizado</span>
+          </div>
+          <span class="text-slate-300">|</span>
+          <div class="bg-blue-50 text-[#0056b3] text-xs px-3 py-1.5 rounded-lg font-bold">
+            <span id="active-os-counter">0</span> OS Ativas
+          </div>
+        </div>
+      </header>
+
+      <!-- BANNER DE APRESENTAÇÃO E SALDO DO CAIXA -->
+      <section class="bg-[#0056b3] text-white px-8 py-6 flex justify-between items-center shadow-md no-print">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight">Painel Administrativo</h1>
+          <p class="text-xs text-blue-200 mt-1">Gerenciamento completo de orçamentos, veículos e financeiro</p>
+        </div>
+        <div class="bg-white/10 px-5 py-3 rounded-xl border border-white/10 text-right">
+          <span class="text-[10px] text-blue-200 font-bold uppercase block mb-1">Saldo Atualizado do Caixa</span>
+          <span id="dashboard-balance" class="text-2xl font-black">R$ 0,00</span>
+        </div>
+      </section>
+
+      <!-- CONTAINER PARA RENDERIZAR AS TELAS DO SISTEMA -->
+      <div class="p-8 flex-1 flex flex-col max-w-7xl w-full mx-auto space-y-6">
+
+        <!-- ==================== TELA 1: DASHBOARD ==================== -->
+        <main id="screen-dashboard" class="flex-1 flex flex-col space-y-6">
+          
+          <!-- Grid de Atalhos Rápidos (ERP Desktop) -->
+          <section class="grid grid-cols-4 gap-4 no-print">
+            <!-- OS -->
+            <button onclick="switchScreen('os-list')" class="bg-white border border-slate-200 rounded-xl p-5 flex items-center gap-4 hover:border-blue-400 transition shadow-sm text-left">
+              <div class="text-[#0056b3] bg-blue-50 p-3 rounded-xl">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-700 block">Ordens de Serviço</span>
+                <span class="text-[10px] text-slate-400">Verificar andamento</span>
+              </div>
+            </button>
+
+            <!-- Clientes e Veículos -->
+            <button onclick="switchScreen('clients')" class="bg-white border border-slate-200 rounded-xl p-5 flex items-center gap-4 hover:border-blue-400 transition shadow-sm text-left">
+              <div class="text-[#0056b3] bg-blue-50 p-3 rounded-xl">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-700 block">Clientes & Carros</span>
+                <span class="text-[10px] text-slate-400">Cadastrar e listar</span>
+              </div>
+            </button>
+
+            <!-- Orçamentos -->
+            <button onclick="switchScreen('quotes-list')" class="bg-white border border-slate-200 rounded-xl p-5 flex items-center gap-4 hover:border-blue-400 transition shadow-sm text-left">
+              <div class="text-[#0056b3] bg-blue-50 p-3 rounded-xl">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-700 block">Orçamentos</span>
+                <span class="text-[10px] text-slate-400">Gerar novas propostas</span>
+              </div>
+            </button>
+
+            <!-- Histórico por Placa -->
+            <button onclick="switchScreen('history')" class="bg-white border border-slate-200 rounded-xl p-5 flex items-center gap-4 hover:border-blue-400 transition shadow-sm text-left">
+              <div class="text-[#0056b3] bg-blue-50 p-3 rounded-xl">
+                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <div>
+                <span class="text-xs font-bold text-slate-700 block">Histórico Clínico</span>
+                <span class="text-[10px] text-slate-400">Buscar por Placa</span>
+              </div>
+            </button>
+          </section>
+
+          <!-- Divisor e Seção de OSs Ativas -->
+          <div class="grid grid-cols-3 gap-6">
+            
+            <!-- Coluna Esquerda: Listagem de OS Ativas (Foco Principal) -->
+            <div class="col-span-2 space-y-4">
+              <div class="flex items-center justify-between border-b pb-2">
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Ordens de Serviço Ativas no Sistema</h3>
+                <button onclick="switchScreen('os-list')" class="text-xs text-blue-600 font-bold hover:underline">Ver todas &rarr;</button>
+              </div>
+              <div id="dashboard-os-list" class="grid grid-cols-1 gap-4">
+                <!-- Preenchido dinamicamente -->
+              </div>
+            </div>
+
+            <!-- Coluna Direita: Cards Informativos e Ações Rápidas -->
+            <div class="space-y-4">
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-xs uppercase text-slate-600 mb-3">Monitor Financeiro</h4>
+                <p class="text-xs text-slate-500 leading-relaxed mb-4">
+                  Acompanhe e registre todas as transações, despesas e faturamento da oficina em tempo real.
+                </p>
+                <button onclick="switchScreen('finance')" class="w-full bg-[#0056b3] hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs transition">
+                  Abrir Fluxo de Caixa
+                </button>
+              </div>
+
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                <h4 class="font-bold text-xs uppercase text-slate-600 mb-2">Suporte e Configurações</h4>
+                <p class="text-[11px] text-slate-400">Para dúvidas ou ajustes cadastrais, use os painéis de Clientes e Carros na barra lateral esquerda.</p>
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        <!-- ==================== TELA 2: CLIENTES & VEÍCULOS ==================== -->
+        <main id="screen-clients" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Gerenciamento de Clientes & Veículos</h2>
+            <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Painel Geral</button>
+          </div>
+
+          <!-- Grid ERP de Clientes: Cadastro à Esquerda, Lista à Direita -->
+          <div class="grid grid-cols-3 gap-6">
+            
+            <!-- Coluna Cadastro (1/3) -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4 self-start">
+              <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2">Novo Cadastro</h3>
+              <form id="form-client" class="space-y-3">
+                <div>
+                  <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Nome Completo</label>
+                  <input type="text" id="client-name" placeholder="Ex: João Silva" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+                </div>
+                <div>
+                  <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">WhatsApp (DDD + Número)</label>
+                  <input type="text" id="client-phone" placeholder="Ex: 31988887777" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Placa do Carro</label>
+                    <input type="text" id="client-plate" placeholder="Ex: ABC1D23" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg uppercase focus:border-blue-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Ano</label>
+                    <input type="text" id="client-car-year" placeholder="Ex: 2021" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+                  </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Marca</label>
+                    <input type="text" id="client-car-brand" placeholder="Ex: Fiat" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+                  </div>
+                  <div>
+                    <label class="text-[9px] font-bold text-slate-500 uppercase block mb-1">Modelo</label>
+                    <input type="text" id="client-car-model" placeholder="Ex: Uno" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+                  </div>
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 rounded-lg transition mt-2">
+                  Salvar Cliente e Veículo
+                </button>
+              </form>
+            </div>
+
+            <!-- Coluna Lista de Clientes (2/3) -->
+            <div class="col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+              <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2 mb-4">Base de Clientes Cadastrados</h3>
+              <div class="grid grid-cols-2 gap-4 max-h-[500px] overflow-y-auto pr-2" id="clients-list-container">
+                <!-- Alimentado Dinamicamente -->
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        <!-- ==================== TELA 3: ORDENS DE SERVIÇO ==================== -->
+        <main id="screen-os-list" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Controle de Ordens de Serviço (OS)</h2>
+            <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Painel Geral</button>
+          </div>
+
+          <!-- Filtros de Status (Desktop Tabs) -->
+          <div class="flex border-b border-slate-200 text-xs bg-white p-2 rounded-xl border shadow-sm">
+            <button onclick="filterOS('todas')" class="flex-1 py-2 font-bold border-b-2 border-blue-600 text-blue-600 text-center rounded-lg hover:bg-slate-50 transition" id="tab-os-todas">Todas as OS</button>
+            <button onclick="filterOS('aberta')" class="flex-1 py-2 text-slate-500 text-center rounded-lg hover:bg-slate-50 transition" id="tab-os-aberta">Em Aberto</button>
+            <button onclick="filterOS('funcionamento')" class="flex-1 py-2 text-slate-500 text-center rounded-lg hover:bg-slate-50 transition" id="tab-os-funcionamento">No Conserto</button>
+            <button onclick="filterOS('concluida')" class="flex-1 py-2 text-slate-500 text-center rounded-lg hover:bg-slate-50 transition" id="tab-os-concluida">Prontas / Finalizadas</button>
+          </div>
+
+          <!-- Container Grid das OSs -->
+          <div id="os-list-container" class="grid grid-cols-2 gap-4">
+            <!-- Alimentado dinamicamente -->
+          </div>
+        </main>
+
+        <!-- ==================== TELA 4: DETALHES DE OS ==================== -->
+        <main id="screen-os-detail" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Detalhes e Execução da OS</h2>
+            <button onclick="switchScreen('os-list')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Voltar à Lista</button>
+          </div>
+
+          <!-- O conteúdo da OS será gerado dinamicamente no formato Desktop ERP -->
+          <div id="os-detail-card" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm space-y-6"></div>
+        </main>
+
+        <!-- ==================== TELA 5: LISTAGEM DE ORÇAMENTOS ==================== -->
+        <main id="screen-quotes-list" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Pipeline de Orçamentos</h2>
+            <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Painel Geral</button>
+          </div>
+
+          <div class="flex justify-between items-center bg-white p-4 border rounded-xl shadow-sm">
+            <p class="text-xs text-slate-500 font-medium">Cadastre estimativas preliminares e converta em ordens de serviço quando aprovados pelo cliente.</p>
+            <button onclick="switchScreen('quote-creator')" class="bg-[#0056b3] text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow hover:bg-blue-700 transition flex items-center gap-1.5 shrink-0">
+              + Criar Novo Orçamento
+            </button>
+          </div>
+
+          <div id="quotes-pipeline-container" class="grid grid-cols-2 gap-4">
+            <!-- Alimentado dinamicamente -->
+          </div>
+        </main>
+
+        <!-- ==================== TELA 6: GERADOR DE ORÇAMENTOS ==================== -->
+        <main id="screen-quote-creator" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Montar Orçamento Completo</h2>
+            <button onclick="switchScreen('quotes-list')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Voltar à Lista</button>
+          </div>
+
+          <!-- Layout Split (Formulário à esquerda / Itens à direita) -->
+          <div class="grid grid-cols-3 gap-6">
+            
+            <!-- Coluna Esquerda: Informações Gerais do Cliente / Vistoria (2/3) -->
+            <div class="col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2">Informações Gerais</h3>
+              
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Selecione o Cliente</label>
+                  <select id="quote-select-client" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white outline-none focus:border-blue-500"></select>
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Método de Pagamento</label>
+                  <select id="quote-select-payment" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white outline-none focus:border-blue-500">
+                    <option value="pix">PIX</option>
+                    <option value="dinheiro">Dinheiro / Espécie</option>
+                    <option value="credito">Cartão de Crédito</option>
+                    <option value="debito">Cartão de Débito</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-3">
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Odômetro (KM de entrada)</label>
+                  <input type="number" id="quote-odometer" placeholder="Ex: 15420" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nível de Combustível</label>
+                  <select id="quote-fuel" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg bg-white outline-none focus:border-blue-500">
+                    <option value="vazio">Reserva / Vazio</option>
+                    <option value="1/4">1/4 de Tanque</option>
+                    <option value="1/2" selected>1/2 de Tanque</option>
+                    <option value="3/4">3/4 de Tanque</option>
+                    <option value="cheio">Tanque Cheio</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- VISTORIA DE ENTRADA -->
+              <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <h3 class="text-xs font-bold text-slate-700 uppercase mb-3">Vistoria de Entrada (Laudo)</h3>
+                <div class="grid grid-cols-3 gap-3 text-xs text-slate-700">
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-lataria" class="rounded border-slate-300 text-blue-600">
+                    <span>Lataria sem riscos</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-estepe" class="rounded border-slate-300 text-blue-600">
+                    <span>Estepe presente</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-ferramentas" class="rounded border-slate-300 text-blue-600">
+                    <span>Macaco e chaves</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-triangulo" class="rounded border-slate-300 text-blue-600">
+                    <span>Triângulo presente</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-luzes" class="rounded border-slate-300 text-blue-600">
+                    <span>Luzes e piscas OK</span>
+                  </label>
+                  <label class="flex items-center gap-1.5 cursor-pointer bg-white p-2 border rounded-lg hover:bg-slate-100">
+                    <input type="checkbox" id="quote-chk-radio" class="rounded border-slate-300 text-blue-600">
+                    <span>Som/Rádio presente</span>
+                  </label>
+                </div>
+                <div class="mt-3">
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Observações Gerais da Vistoria</label>
+                  <input type="text" id="quote-inspection-notes" placeholder="Ex: Detalhe de risco no paralama dianteiro..." class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none bg-white focus:border-blue-500">
+                </div>
+              </div>
+
+              <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Solicitação Inicial do Cliente (Problema Relatado)</label>
+                <input type="text" id="quote-problem-desc" placeholder="Ex: Barulho na suspensão dianteira..." class="w-full text-xs p-3 border border-slate-300 rounded-lg focus:border-blue-500 outline-none">
+              </div>
+            </div>
+
+            <!-- Coluna Direita: Inclusão de Peças/Serviços e Preview de Valores (1/3) -->
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-4">
+              <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2">Serviços & Peças</h3>
+
+              <!-- Adicionar Serviços -->
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                <h4 class="text-[10px] font-bold text-slate-600 uppercase">Mão de Obra</h4>
+                <div class="flex gap-1.5">
+                  <input type="text" id="quote-service-desc" placeholder="Ex: Troca de pastilhas" class="flex-1 text-xs p-2 border border-slate-300 rounded-lg outline-none">
+                  <input type="number" id="quote-service-price" placeholder="R$" class="w-16 text-xs p-2 border border-slate-300 rounded-lg outline-none">
+                  <button onclick="addQuoteItem('service')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 rounded-lg font-bold">+</button>
+                </div>
+                <ul id="quote-services-list" class="text-xs space-y-1 divide-y divide-slate-100 max-h-24 overflow-y-auto pr-1"></ul>
+              </div>
+
+              <!-- Adicionar Peças -->
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                <h4 class="text-[10px] font-bold text-slate-600 uppercase">Peças e Insumos</h4>
+                <div class="flex gap-1.5">
+                  <input type="text" id="quote-part-desc" placeholder="Ex: Kit pastilhas Bosch" class="flex-1 text-xs p-2 border border-slate-300 rounded-lg outline-none">
+                  <input type="number" id="quote-part-price" placeholder="R$" class="w-14 text-xs p-2 border border-slate-300 rounded-lg outline-none">
+                  <input type="number" id="quote-part-qty" value="1" class="w-10 text-xs p-2 border border-slate-300 rounded-lg text-center outline-none">
+                  <button onclick="addQuoteItem('part')" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 rounded-lg font-bold">+</button>
+                </div>
+                <ul id="quote-parts-list" class="text-xs space-y-1 divide-y divide-slate-100 max-h-24 overflow-y-auto pr-1"></ul>
+              </div>
+
+              <!-- Total do Preview e Salvar -->
+              <div class="bg-slate-100 p-4 rounded-xl space-y-3">
+                <div class="flex items-center justify-between font-black text-sm text-slate-800">
+                  <span>VALOR ESTIMADO:</span>
+                  <span id="quote-total-preview" class="text-lg text-[#0056b3]">R$ 0,00</span>
+                </div>
+                <button onclick="saveAndPipelineQuote()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-3 rounded-xl transition shadow">
+                  Salvar Orçamento
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        <!-- ==================== TELA 7: FLUXO DE CAIXA ==================== -->
+        <main id="screen-finance" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Fluxo de Caixa & Finanças</h2>
+            <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Painel Geral</button>
+          </div>
+
+          <!-- Split Layout para Financeiro -->
+          <div class="grid grid-cols-3 gap-6">
+            
+            <!-- Coluna Esquerda: Estatísticas e Lançamento (1/3) -->
+            <div class="space-y-4 self-start">
+              
+              <!-- Cards de Entradas/Saídas -->
+              <div class="grid grid-cols-2 gap-3">
+                <div class="bg-emerald-50 border border-emerald-200 p-4 rounded-xl shadow-sm">
+                  <span class="text-[9px] font-bold text-emerald-800 uppercase block mb-1">Total de Entradas</span>
+                  <span id="finance-inflows" class="text-base font-black text-emerald-700">R$ 0,00</span>
+                </div>
+                <div class="bg-red-50 border border-red-200 p-4 rounded-xl shadow-sm">
+                  <span class="text-[9px] font-bold text-red-800 uppercase block mb-1">Total de Saídas</span>
+                  <span id="finance-outflows" class="text-base font-black text-red-700">R$ 0,00</span>
+                </div>
+              </div>
+
+              <!-- Lançar Saída Manual -->
+              <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2">Lançar Despesa Manual</h3>
+                <form id="form-expense" class="space-y-3">
+                  <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Descrição</label>
+                    <input type="text" id="expense-desc" placeholder="Ex: Conta de Luz, Aluguel" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                  </div>
+                  <div>
+                    <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Valor da Despesa</label>
+                    <input type="number" id="expense-value" placeholder="R$ 150.00" required class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                  </div>
+                  <button type="submit" class="w-full bg-red-600 hover:bg-red-700 text-white font-bold text-xs py-2.5 rounded-lg transition">
+                    Registrar Saída de Caixa
+                  </button>
+                </form>
+              </div>
+
+              <!-- Botão para Resetar o Caixa -->
+              <button onclick="resetFinance()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-2.5 rounded-xl transition">
+                Zerar Histórico do Caixa
+              </button>
+            </div>
+
+            <!-- Coluna Direita: Histórico de Transações Ledger (2/3) -->
+            <div class="col-span-2 bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-[450px]">
+              <h3 class="text-xs font-bold text-slate-700 uppercase border-b pb-2 mb-4">Histórico de Transações Recentes</h3>
+              <div id="finance-ledger" class="space-y-2 flex-1 overflow-y-auto max-h-[420px] pr-2">
+                <!-- Preenchido via Firebase -->
+              </div>
+            </div>
+
+          </div>
+        </main>
+
+        <!-- ==================== TELA 8: HISTÓRICO CLÍNICO POR PLACA ==================== -->
+        <main id="screen-history" class="flex-1 space-y-4 hidden">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800 uppercase tracking-tight">Histórico Clínico do Veículo</h2>
+            <button onclick="switchScreen('dashboard')" class="text-slate-500 flex items-center gap-1 text-xs font-bold hover:text-slate-800">&larr; Painel Geral</button>
+          </div>
+
+          <!-- Barra de Busca por Placa Estilo ERP -->
+          <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+            <label class="text-[10px] font-bold text-slate-500 uppercase block">Consulte o prontuário completo de revisões do automóvel</label>
+            <div class="flex gap-3 max-w-xl">
+              <input type="text" id="history-search-input" placeholder="Ex: XYZ1234" class="flex-1 text-xs p-3 border border-slate-300 rounded-lg bg-white uppercase outline-none focus:border-blue-500 font-bold tracking-widest text-lg text-slate-700">
+              <button onclick="searchVehicleHistory()" class="bg-[#0056b3] text-white font-bold text-xs px-6 rounded-lg hover:bg-blue-700 transition shrink-0">
+                Buscar Prontuário
+              </button>
+            </div>
+          </div>
+
+          <!-- Resultados do Histórico -->
+          <div id="history-results" class="space-y-4">
+            <div class="bg-white p-10 text-center rounded-xl border text-slate-400 text-xs">
+              Insira uma placa de veículo acima para consultar o histórico clínico de revisões.
+            </div>
+          </div>
+        </main>
+
+        <!-- MODAL DE EDIÇÃO DE CLIENTES (DESKTOP) -->
+        <div id="modal-edit-client" class="hidden fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
+          <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <h3 class="text-sm font-black text-slate-800 uppercase border-b pb-2">Editar Cliente & Carro</h3>
+            <input type="hidden" id="edit-client-id">
+            
+            <div class="space-y-3">
+              <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Nome do Cliente</label>
+                <input type="text" id="edit-client-name" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">WhatsApp</label>
+                <input type="text" id="edit-client-phone" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Marca</label>
+                  <input type="text" id="edit-client-car-brand" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Modelo</label>
+                  <input type="text" id="edit-client-car-model" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Placa</label>
+                  <input type="text" id="edit-client-plate" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg uppercase outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="text-[10px] font-bold text-slate-500 uppercase block mb-1">Ano</label>
+                  <input type="text" id="edit-client-car-year" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg outline-none focus:border-blue-500">
+                </div>
+              </div>
+            </div>
+
+            <div class="flex gap-2 pt-2">
+              <button onclick="closeEditModal()" class="flex-1 bg-slate-200 text-slate-700 text-xs py-2.5 rounded-lg font-bold">Cancelar</button>
+              <button onclick="saveEditedClient()" class="flex-1 bg-[#0056b3] text-white text-xs py-2.5 rounded-lg font-bold">Salvar Alterações</button>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- FIM DO CONTAINER WORKSPACE -->
+
+    </div> <!-- FIM DA ÁREA PRINCIPAL -->
+
+  </div> <!-- FIM DO CONTAINER ERP -->
 
   <!-- ===== SISTEMA DE TOAST (NOTIFICAÇÕES CUSTOMIZADAS) ===== -->
   <div id="toast-container" class="fixed top-5 left-1/2 -translate-x-1/2 z-[999999] flex flex-col items-center gap-2 pointer-events-none" style="width: calc(100% - 32px); max-width: 420px;"></div>
