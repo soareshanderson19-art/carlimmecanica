@@ -16,6 +16,7 @@ const firebaseConfig = {
 // Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
+const auth = firebase.auth();
 
 let clients = [];
 let quotes = [];
@@ -24,6 +25,19 @@ let transactions = [];
 let tempQuoteItems = { services: [], parts: [] };
 let activeOSDetailId = null;
 let activeOSFilter = "todas";
+
+// Monitor de Estado de Autenticação (Abre e fecha as telas com base no login)
+auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('screen-login').classList.add('hidden');
+    document.getElementById('app-container').classList.remove('hidden');
+    startRealtimeSync();
+    switchScreen('dashboard');
+  } else {
+    document.getElementById('screen-login').classList.remove('hidden');
+    document.getElementById('app-container').classList.add('hidden');
+  }
+});
 
 function getWhatsAppUrl(phone) {
   const cleanPhone = phone.replace(/\D/g, "");
@@ -34,7 +48,7 @@ function formatSeqNumber(num) {
   return num ? "#" + String(num).padStart(2, '0') : "#01";
 }
 
-// Funções de UI (Toast/Confirm) mantidas...
+// Funções de UI (Toast/Confirm)
 function showToast(message, type = 'info', duration = 3500) {
   const container = document.getElementById('toast-container');
   if (!container) { alert(message); return; }
@@ -56,6 +70,119 @@ function showConfirm(message, onConfirm) {
   const close = () => modal.classList.add('hidden');
   btnOk.onclick = () => { close(); onConfirm(); };
   btnCancel.onclick = close;
+}
+
+// -------------------------------------------------------------
+// SISTEMA DE AUTENTICAÇÃO (FIREBASE AUTH)
+// -------------------------------------------------------------
+function handleLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass = document.getElementById('login-pass').value;
+  if (!email || !pass) {
+    showToast("Preencha o e-mail e a senha.", "error");
+    return;
+  }
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => {
+      showToast("Acesso concedido!", "success");
+    })
+    .catch(error => {
+      showToast("Erro ao entrar: " + translateAuthError(error.code), "error");
+    });
+}
+
+function handleRegister() {
+  const email = document.getElementById('register-email').value.trim();
+  const pass = document.getElementById('register-pass').value;
+  if (!email || !pass) {
+    showToast("Preencha todos os campos do cadastro.", "error");
+    return;
+  }
+  if (pass.length < 6) {
+    showToast("A senha deve conter no mínimo 6 caracteres.", "warning");
+    return;
+  }
+  auth.createUserWithEmailAndPassword(email, pass)
+    .then(() => {
+      showToast("Cadastro realizado com sucesso!", "success");
+      toggleRegisterForm(false);
+    })
+    .catch(error => {
+      showToast("Erro ao cadastrar: " + translateAuthError(error.code), "error");
+    });
+}
+
+function handleLogout() {
+  showConfirm("Deseja realmente sair do sistema?", () => {
+    auth.signOut().then(() => {
+      showToast("Sessão finalizada.", "info");
+    });
+  });
+}
+
+function handlePasswordChange() {
+  const email = document.getElementById('pass-email-confirm').value.trim();
+  const currentPass = document.getElementById('pass-current').value;
+  const newPass = document.getElementById('pass-new').value;
+
+  if (!email || !currentPass || !newPass) {
+    showToast("Preencha todos os campos para prosseguir.", "warning");
+    return;
+  }
+  if (newPass.length < 6) {
+    showToast("A nova senha deve ter pelo menos 6 caracteres.", "warning");
+    return;
+  }
+
+  const user = auth.currentUser;
+  if (!user) {
+    showToast("Usuário não identificado.", "error");
+    return;
+  }
+
+  const credential = firebase.auth.EmailAuthProvider.credential(email, currentPass);
+  user.reauthenticateWithCredential(credential)
+    .then(() => {
+      user.updatePassword(newPass)
+        .then(() => {
+          showToast("Senha alterada com sucesso!", "success");
+          togglePasswordChange(false);
+          document.getElementById('pass-email-confirm').value = '';
+          document.getElementById('pass-current').value = '';
+          document.getElementById('pass-new').value = '';
+        })
+        .catch(error => {
+          showToast("Erro ao atualizar senha: " + translateAuthError(error.code), "error");
+        });
+    })
+    .catch(error => {
+      showToast("Erro na reautenticação: " + translateAuthError(error.code), "error");
+    });
+}
+
+function toggleRegisterForm(show) {
+  document.getElementById('login-form-container').classList.toggle('hidden', show);
+  document.getElementById('register-form-container').classList.toggle('hidden', !show);
+  document.getElementById('password-change-container').classList.add('hidden');
+}
+
+function togglePasswordChange(show) {
+  document.getElementById('login-form-container').classList.toggle('hidden', show);
+  document.getElementById('password-change-container').classList.toggle('hidden', !show);
+  document.getElementById('register-form-container').classList.add('hidden');
+}
+
+function translateAuthError(code) {
+  switch (code) {
+    case 'auth/invalid-email': return 'E-mail em formato inválido.';
+    case 'auth/user-disabled': return 'Este usuário está desativado.';
+    case 'auth/user-not-found': return 'Usuário não cadastrado.';
+    case 'auth/wrong-password': return 'Senha incorreta.';
+    case 'auth/email-already-in-use': return 'Este e-mail já está em uso.';
+    case 'auth/weak-password': return 'A senha fornecida é muito fraca.';
+    case 'auth/invalid-credential': return 'Dados de acesso incorretos.';
+    default: return code;
+  }
 }
 
 // -------------------------------------------------------------
@@ -117,7 +244,10 @@ function renderClients() {
       <div class="bg-white p-3 border rounded-xl shadow-sm">
         <div class="flex justify-between">
           <h4 class="font-bold text-xs">${c.name}</h4>
-          <button onclick="deleteClient('${c.id}')" class="text-red-500 text-[10px]">Excluir</button>
+          <div>
+            <button onclick="openEditModal('${c.id}')" class="text-blue-500 text-[10px] mr-2">Editar</button>
+            <button onclick="deleteClient('${c.id}')" class="text-red-500 text-[10px]">Excluir</button>
+          </div>
         </div>
         <p class="text-[10px] text-slate-500">${c.carBrand} ${c.carModel} - ${c.plate}</p>
       </div>`).join("");
@@ -132,7 +262,44 @@ function populateClientSelects() {
   if (s) s.innerHTML = '<option value="">-- Selecione o Cliente --</option>' + clients.map(c => `<option value="${c.id}">${c.name}</option>`).join("");
 }
 
-// ADICIONADO: Função para atualizar contadores globais na interface do celular
+// Edição de Clientes
+function openEditModal(clientId) {
+  const client = clients.find(c => c.id === clientId);
+  if (!client) return;
+  document.getElementById('edit-client-id').value = clientId;
+  document.getElementById('edit-client-name').value = client.name || "";
+  document.getElementById('edit-client-phone').value = client.phone || "";
+  document.getElementById('edit-client-car-brand').value = client.carBrand || "";
+  document.getElementById('edit-client-car-model').value = client.carModel || "";
+  document.getElementById('edit-client-plate').value = client.plate || "";
+  document.getElementById('edit-client-car-year').value = client.carYear || "";
+  document.getElementById('modal-edit-client').classList.remove('hidden');
+}
+
+function closeEditModal() {
+  document.getElementById('modal-edit-client').classList.add('hidden');
+}
+
+function saveEditedClient() {
+  const id = document.getElementById('edit-client-id').value;
+  const updatedData = {
+    name: document.getElementById('edit-client-name').value.toUpperCase(),
+    phone: document.getElementById('edit-client-phone').value,
+    plate: document.getElementById('edit-client-plate').value.toUpperCase(),
+    carBrand: document.getElementById('edit-client-car-brand').value.toUpperCase(),
+    carModel: document.getElementById('edit-client-car-model').value.toUpperCase(),
+    carYear: document.getElementById('edit-client-car-year').value
+  };
+  db.collection("clients").doc(id).update(updatedData)
+    .then(() => {
+      showToast("Cliente atualizado!", "success");
+      closeEditModal();
+    })
+    .catch(err => {
+      showToast("Erro ao atualizar: " + err.message, "error");
+    });
+}
+
 function updateGlobalCounters() {
   const activeOS = orders.filter(o => o.status !== "concluida");
   const counter = document.getElementById('active-os-counter');
@@ -140,7 +307,7 @@ function updateGlobalCounters() {
   renderFinance();
 }
 
-// ORÇAMENTOS E DEMAIS CRUDS (CONECTADOS VIA FIREBASE DIRECT)
+// Orçamentos
 function renderQuotesPipeline() {
   const container = document.getElementById('quotes-pipeline-container');
   if (!container) return;
@@ -166,7 +333,6 @@ function renderQuotesPipeline() {
       }).join("");
 }
 
-// ADICIONADO: Exclusão de orçamento re-adicionada para evitar erros de ReferenceError
 function deleteQuote(id) {
   showConfirm("Remover este orçamento permanentemente?", () => {
     db.collection("quotes").doc(id).delete()
@@ -199,7 +365,10 @@ function saveAndPipelineQuote() {
     },
     services: [...tempQuoteItems.services], parts: [...tempQuoteItems.parts]
   };
-  db.collection("quotes").doc(newId).set(newQuote).then(() => switchScreen('quotes-list'));
+  db.collection("quotes").doc(newId).set(newQuote).then(() => {
+    resetQuoteForm();
+    switchScreen('quotes-list');
+  });
 }
 
 function addQuoteItem(type) {
@@ -244,7 +413,10 @@ function resetQuoteForm() {
   ['quote-service-desc', 'quote-service-price', 'quote-part-desc', 'quote-part-price', 'quote-problem-desc', 'quote-inspection-notes', 'quote-odometer'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('quote-part-qty').value = '1';
   document.getElementById('quote-fuel').value = '1/2';
-  ['quote-chk-lataria', 'quote-chk-estepe', 'quote-chk-ferramentas', 'quote-chk-triangulo', 'quote-chk-luzes', 'quote-chk-radio'].forEach(id => document.getElementById(id).checked = false);
+  ['quote-chk-lataria', 'quote-chk-estepe', 'quote-chk-ferramentas', 'quote-chk-triangulo', 'quote-chk-luzes', 'quote-chk-radio'].forEach(id => {
+    const chk = document.getElementById(id);
+    if (chk) chk.checked = false;
+  });
   renderQuoteFormItems();
 }
 
@@ -262,7 +434,7 @@ function approveQuote(quoteId) {
   });
 }
 
-// ORDENS DE SERVIÇO (OS)
+// Ordens de Serviço (OS)
 function filterOS(status) {
   activeOSFilter = status;
   ['todas', 'aberta', 'funcionamento', 'concluida'].forEach(tab => {
@@ -425,14 +597,23 @@ function addItemToOS(type) {
     const price = parseFloat(document.getElementById('add-srv-price').value);
     if (!desc || isNaN(price)) return;
     os.services.push({ desc, price });
-    db.collection("orders").doc(os.id).update({ services: os.services }).then(() => renderOSDetailContent());
+    db.collection("orders").doc(os.id).update({ services: os.services }).then(() => {
+      document.getElementById('add-srv-desc').value = '';
+      document.getElementById('add-srv-price').value = '';
+      renderOSDetailContent();
+    });
   } else {
     const desc = document.getElementById('add-part-desc').value.toUpperCase();
     const price = parseFloat(document.getElementById('add-part-price').value);
     const qty = parseInt(document.getElementById('add-part-qty').value) || 1;
     if (!desc || isNaN(price)) return;
     os.parts.push({ desc, price, qty });
-    db.collection("orders").doc(os.id).update({ parts: os.parts }).then(() => renderOSDetailContent());
+    db.collection("orders").doc(os.id).update({ parts: os.parts }).then(() => {
+      document.getElementById('add-part-desc').value = '';
+      document.getElementById('add-part-price').value = '';
+      document.getElementById('add-part-qty').value = '1';
+      renderOSDetailContent();
+    });
   }
 }
 
@@ -453,7 +634,7 @@ function deleteOS(id) {
   });
 }
 
-// FINANCEIRO (CAIXA)
+// Financeiro
 function renderFinance() {
   const inflowsEl = document.getElementById('finance-inflows');
   const outflowsEl = document.getElementById('finance-outflows');
@@ -494,7 +675,7 @@ function resetFinance() {
   });
 }
 
-// HISTÓRICO POR PLACA
+// Histórico de Veículo
 function resetHistoryScreen() {
   const input = document.getElementById("history-search-input");
   if (input) input.value = "";
@@ -535,11 +716,11 @@ function searchVehicleHistory() {
   container.innerHTML = html + `</div>`;
 }
 
-// GERAÇÃO DO PDF VETORIAL DIRETO NO CELULAR (IMUNE A ERROS DE TELA BRANCA)
+// PDF Creator
 function sharePDFViaSystem(type, id) {
   const isQuote = type === 'quote';
   const docData = isQuote ? quotes.find(q => q.id === id) : orders.find(o => o.id === id);
-  if (!docData) { showToast("Documento nao encontrado.", 'error'); return; }
+  if (!docData) { showToast("Documento não encontrado.", 'error'); return; }
 
   const client = clients.find(c => c.id === docData.clientId) || { name: "Cliente", phone: "N/A", carModel: "N/A", plate: "N/A", carBrand: "N/A", carYear: "N/A" };
   const associatedOS = isQuote ? orders.find(o => o.id === "OS-" + docData.id) : null;
@@ -561,7 +742,7 @@ function sharePDFViaSystem(type, id) {
   const docBadge = isQuote ? "Estimativa" : "Servico Concluido";
 
   const jsPDFObj = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
-  if (!jsPDFObj) { showToast("Erro: Biblioteca jsPDF nao carregada.", 'error'); return; }
+  if (!jsPDFObj) { showToast("Erro: Biblioteca jsPDF não carregada.", 'error'); return; }
 
   showToast("Gerando PDF oficial...", 'info', 2000);
 
@@ -604,7 +785,6 @@ function sharePDFViaSystem(type, id) {
   y += 8;
   doc.setLineWidth(0.2);
   
-  // Caixa Cliente
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
   doc.rect(15, y, 87, 24, "FD");
@@ -618,7 +798,6 @@ function sharePDFViaSystem(type, id) {
   doc.text(`Nome: ${client.name}`, 18, y + 11);
   doc.text(`Telefone: ${client.phone}`, 18, y + 18);
 
-  // Caixa Veículo
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
   doc.rect(108, y, 87, 24, "FD");
