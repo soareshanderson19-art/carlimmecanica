@@ -1,5 +1,5 @@
 // Configurações Oficiais do Firebase
-const OFICINA_WHATSAPP = "99999999999";
+const OFICINA_WHATSAPP = "5562985153191";
 const OFICINA_NOME = "Mecânica do Carlim";
 const OFICINA_ENDERECO = "Manutenção Automotiva Geral - Carlim";
 
@@ -74,7 +74,7 @@ function showToast(message, type = 'info', duration = 3500) {
   const container = document.getElementById('toast-container');
   if (!container) { alert(message); return; }
   const toast = document.createElement('div');
-  toast.className = `toast-item flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold text-white ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-[#0056b3]'}`;
+  toast.className = `toast-item flex items-center gap-2.5 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold text-white ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-[#c62828]'}`;
   toast.style.cssText = 'width:100%; backdrop-filter:blur(4px);';
   toast.innerHTML = `<span class="flex-1">${message}</span>`;
   container.appendChild(toast);
@@ -268,17 +268,17 @@ document.getElementById('form-client')?.addEventListener('submit', function(e) {
 function renderClients() {
   const container = document.getElementById('clients-list-container');
   if (!container) return;
-  container.innerHTML = clients.length === 0 ? `<p class="text-xs text-slate-400 text-center">Nenhum cliente.</p>` : 
+  container.innerHTML = clients.length === 0 ? `<p class="text-xs text-neutral-500 text-center">Nenhum cliente.</p>` : 
     clients.map(c => `
-      <div class="bg-white p-3 border rounded-xl shadow-sm">
+      <div class="bg-neutral-900 p-3 border rounded-xl shadow-sm">
         <div class="flex justify-between">
           <h4 class="font-bold text-xs">${c.name}</h4>
           <div>
-            <button onclick="openEditModal('${c.id}')" class="text-blue-500 text-[10px] mr-2">Editar</button>
+            <button onclick="openEditModal('${c.id}')" class="text-red-500 text-[10px] mr-2">Editar</button>
             <button onclick="deleteClient('${c.id}')" class="text-red-500 text-[10px]">Excluir</button>
           </div>
         </div>
-        <p class="text-[10px] text-slate-500">${c.carBrand} ${c.carModel} - ${c.plate}</p>
+        <p class="text-[10px] text-neutral-400">${c.carBrand} ${c.carModel} - ${c.plate}</p>
       </div>`).join("");
 }
 
@@ -342,24 +342,24 @@ function renderQuotesPipeline() {
   const container = document.getElementById('quotes-pipeline-container');
   if (!container) return;
   container.innerHTML = quotes.length === 0
-    ? `<p class="text-xs text-slate-400 text-center py-4">Nenhum orçamento cadastrado.</p>`
+    ? `<p class="text-xs text-neutral-500 text-center py-4">Nenhum orçamento cadastrado.</p>`
     : quotes.map(q => {
         const c = clients.find(cl => cl.id === q.clientId) || { name: "Removido" };
-        const status = q.status === "aguardando" ? `<span class="text-[9px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">Aguardando</span>` : q.status === "aprovado" ? `<span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Aprovado</span>` : `<span class="text-[9px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">Recusado</span>`;
+        const status = q.status === "aguardando" ? `<span class="text-[9px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">Aguardando</span>` : q.status === "aprovado" ? `<span class="text-[9px] bg-emerald-500/15 text-emerald-300 font-bold px-2 py-0.5 rounded">Aprovado</span>` : `<span class="text-[9px] bg-red-500/15 text-red-800 font-bold px-2 py-0.5 rounded">Recusado</span>`;
         const act = q.status === "aguardando" ? `<button onclick="approveQuote('${q.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded text-[10px]">Aprovar e OS</button>` : "";
         const servicesList = q.services || [];
         const partsList = q.parts || [];
         const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
         return `
-          <div class="bg-white p-3 border border-slate-200 rounded-xl shadow-sm space-y-3">
+          <div class="bg-neutral-900 p-3 border border-neutral-800 rounded-xl shadow-sm space-y-3">
             <div class="flex justify-between items-start">
-              <div><h4 class="font-bold text-xs text-slate-800 uppercase">${formatSeqNumber(q.seqNumber)} - ${c.name}</h4><p class="text-[10px] text-slate-400">Problema: "${q.problem}"</p></div>
-              <div class="text-right">${status}<p class="text-[10px] font-bold text-slate-500 mt-1">R$ ${tot.toFixed(2)}</p></div>
+              <div><h4 class="font-bold text-xs text-neutral-100 uppercase">${formatSeqNumber(q.seqNumber)} - ${c.name}</h4><p class="text-[10px] text-neutral-500">Problema: "${q.problem}"</p></div>
+              <div class="text-right">${status}<p class="text-[10px] font-bold text-neutral-400 mt-1">R$ ${tot.toFixed(2)}</p></div>
             </div>
             <div class="flex gap-1.5 border-t pt-2.5 flex-wrap">
               ${act}
-              <button onclick="sharePDFViaSystem('quote', '${q.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs hover:bg-blue-700 transition">Compartilhar PDF</button>
-              <button onclick="deleteQuote('${q.id}')" class="text-red-500 hover:text-red-700 font-bold text-[10px] px-2">Excluir</button>
+              <button onclick="sharePDFViaSystem('quote', '${q.id}')" class="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs hover:bg-red-700 transition">Compartilhar PDF</button>
+              <button onclick="deleteQuote('${q.id}')" class="text-red-500 hover:text-red-400 font-bold text-[10px] px-2">Excluir</button>
             </div>
           </div>`;
       }).join("");
@@ -471,7 +471,7 @@ function filterOS(status) {
   activeOSFilter = status;
   ['todas', 'aberta', 'funcionamento', 'concluida'].forEach(tab => {
     const btn = document.getElementById(`tab-os-${tab}`);
-    if (btn) btn.className = "flex-1 py-2 text-center rounded-lg hover:bg-slate-50 transition " + (tab === status ? "font-bold border-b-2 border-blue-600 text-blue-600" : "text-slate-500");
+    if (btn) btn.className = "flex-1 py-2 text-center rounded-lg hover:bg-neutral-800 transition " + (tab === status ? "font-bold border-b-2 border-red-600 text-red-500" : "text-neutral-400");
   });
   renderOSList();
 }
@@ -487,19 +487,19 @@ function renderOSList() {
     const partsList = os.parts || [];
     const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
     return `
-      <div class="bg-white p-3 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
+      <div class="bg-neutral-900 p-3 border border-neutral-800 rounded-xl shadow-sm flex flex-col justify-between">
         <div class="flex justify-between items-start cursor-pointer" onclick="openOSDetail('${os.id}')">
           <div class="flex items-start gap-2.5">
             <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs">···</div>
-            <div><h4 class="font-bold text-xs text-slate-800 uppercase">${c.name}</h4><p class="text-[10px] text-slate-500">"${os.problem}"</p></div>
+            <div><h4 class="font-bold text-xs text-neutral-100 uppercase">${c.name}</h4><p class="text-[10px] text-neutral-400">"${os.problem}"</p></div>
           </div>
-          <div class="text-right"><span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100">${os.status}</span><p class="text-[10px] font-bold text-slate-500 mt-1">${formatSeqNumber(os.seqNumber)}</p></div>
+          <div class="text-right"><span class="text-[9px] font-bold px-2 py-0.5 rounded bg-neutral-950">${os.status}</span><p class="text-[10px] font-bold text-neutral-400 mt-1">${formatSeqNumber(os.seqNumber)}</p></div>
         </div>
-        <div class="border-t border-dashed border-slate-200 my-2 pt-2 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center text-[10px]">
+        <div class="border-t border-dashed border-neutral-800 my-2 pt-2 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center text-[10px]">
           <span>Carro: <strong>${c.carModel}</strong> (${c.plate})</span>
           <div class="flex items-center gap-2 justify-between w-full sm:w-auto">
-            <span class="font-bold text-slate-800 text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">R$ ${tot.toFixed(2)}</span>
-            <button onclick="openOSDetail('${os.id}')" class="text-[#0056b3] font-bold">Ver Processo &rarr;</button>
+            <span class="font-bold text-neutral-100 text-[11px] bg-neutral-950 px-1.5 py-0.5 rounded">R$ ${tot.toFixed(2)}</span>
+            <button onclick="openOSDetail('${os.id}')" class="text-[#c62828] font-bold">Ver Processo &rarr;</button>
           </div>
         </div>
       </div>`;
@@ -516,20 +516,20 @@ function renderDashboardOS() {
     const partsList = os.parts || [];
     const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
     return `
-      <div class="bg-slate-50 p-3 border border-slate-200 rounded-xl shadow-sm space-y-2">
+      <div class="bg-black p-3 border border-neutral-800 rounded-xl shadow-sm space-y-2">
         <div class="flex justify-between items-start cursor-pointer" onclick="openOSDetail('${os.id}')">
           <div class="text-xs">
-            <div class="flex items-center gap-1.5"><h4 class="font-bold text-slate-800 uppercase text-sm">${c.name}</h4><a href="${getWhatsAppUrl(c.phone)}" target="_blank" class="text-emerald-500" onclick="event.stopPropagation()"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.761.453 3.42 1.242 4.877l-1.32 4.838 4.977-1.304c1.401.761 3 1.189 4.689 1.189 5.506 0 9.988-4.482 9.988-9.988C22 6.482 17.518 2 12.012 2zm.006 16.512c-1.572 0-3.048-.426-4.32-1.164l-.306-.18-2.952.774.792-2.886-.204-.324a8.125 8.125 0 01-1.242-4.32c0-4.506 3.666-8.172 8.172-8.172s8.172 3.666 8.172 8.172-3.666 8.172-8.172 8.172z"/></svg></a></div>
-            <p class="text-[10px] text-slate-500 mt-0.5">Veículo: <strong>${c.carBrand} ${c.carModel}</strong></p>
+            <div class="flex items-center gap-1.5"><h4 class="font-bold text-neutral-100 uppercase text-sm">${c.name}</h4><a href="${getWhatsAppUrl(c.phone)}" target="_blank" class="text-emerald-500" onclick="event.stopPropagation()"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12.012 2c-5.506 0-9.988 4.482-9.988 9.988 0 1.761.453 3.42 1.242 4.877l-1.32 4.838 4.977-1.304c1.401.761 3 1.189 4.689 1.189 5.506 0 9.988-4.482 9.988-9.988C22 6.482 17.518 2 12.012 2zm.006 16.512c-1.572 0-3.048-.426-4.32-1.164l-.306-.18-2.952.774.792-2.886-.204-.324a8.125 8.125 0 01-1.242-4.32c0-4.506 3.666-8.172 8.172-8.172s8.172 3.666 8.172 8.172-3.666 8.172-8.172 8.172z"/></svg></a></div>
+            <p class="text-[10px] text-neutral-400 mt-0.5">Veículo: <strong>${c.carBrand} ${c.carModel}</strong></p>
           </div>
           <div class="text-right flex flex-col items-end gap-1">
             <span class="text-[9px] bg-orange-100 text-orange-800 font-bold px-2 py-0.5 rounded">${os.status}</span>
-            <span class="text-[10px] font-extrabold text-[#0056b3]">OS ${formatSeqNumber(os.seqNumber)}</span>
+            <span class="text-[10px] font-extrabold text-[#c62828]">OS ${formatSeqNumber(os.seqNumber)}</span>
           </div>
         </div>
-        <div class="border-t border-dashed border-slate-200 pt-2 flex justify-between items-center text-[10px]">
+        <div class="border-t border-dashed border-neutral-800 pt-2 flex justify-between items-center text-[10px]">
           <div class="plate-mercosul"><div class="plate-header">BRASIL</div><div class="plate-digits">${c.plate}</div></div>
-          <span class="font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border">R$ ${tot.toFixed(2)}</span>
+          <span class="font-extrabold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded border">R$ ${tot.toFixed(2)}</span>
         </div>
       </div>`;
   }).join("");
@@ -552,16 +552,16 @@ function renderOSDetailContent() {
   const insp = os.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." };
 
   container.innerHTML = `
-    <div class="bg-slate-100 p-3 rounded-lg text-xs space-y-1">
-      <div class="flex justify-between font-bold"><span>Cliente: ${c.name}</span><span class="text-[#0056b3]">OS ${formatSeqNumber(os.seqNumber)}</span></div>
+    <div class="bg-neutral-950 p-3 rounded-lg text-xs space-y-1">
+      <div class="flex justify-between font-bold"><span>Cliente: ${c.name}</span><span class="text-[#c62828]">OS ${formatSeqNumber(os.seqNumber)}</span></div>
       <p>Veículo: ${c.carModel} (${c.carYear}) | Placa: ${c.plate}</p>
       <p>Odômetro: <strong>${os.odometer || "0"} KM</strong></p>
-      <p class="text-[11px] text-slate-500 italic">"${os.problem}"</p>
+      <p class="text-[11px] text-neutral-400 italic">"${os.problem}"</p>
     </div>
-    <div class="bg-slate-50 p-2.5 rounded-lg border text-xs space-y-1">
-      <h4 class="font-bold text-[10px] text-slate-500 uppercase">Laudo de Vistoria</h4>
+    <div class="bg-black p-2.5 rounded-lg border text-xs space-y-1">
+      <h4 class="font-bold text-[10px] text-neutral-400 uppercase">Laudo de Vistoria</h4>
       <p>Combustível: <strong>${insp.fuel.toUpperCase()}</strong></p>
-      <div class="grid grid-cols-2 gap-1 text-[10px] text-slate-600">
+      <div class="grid grid-cols-2 gap-1 text-[10px] text-neutral-300">
         <div>Lataria: <strong>${insp.lataria ? 'SIM' : 'NÃO'}</strong></div>
         <div>Estepe: <strong>${insp.estepe ? 'SIM' : 'NÃO'}</strong></div>
         <div>Ferramentas: <strong>${insp.ferramentas ? 'SIM' : 'NÃO'}</strong></div>
@@ -572,43 +572,43 @@ function renderOSDetailContent() {
       <p class="text-[10px] italic border-t pt-1 mt-1">Obs: "${insp.notes}"</p>
     </div>
     <div class="flex gap-2 flex-wrap">
-      <select onchange="updateOSStatus(this.value)" class="flex-1 min-w-[120px] text-xs p-2 border rounded bg-white">
+      <select onchange="updateOSStatus(this.value)" class="flex-1 min-w-[120px] text-xs p-2 border rounded bg-neutral-900">
         <option value="aberta" ${os.status === 'aberta' ? 'selected' : ''}>Em Aberto</option>
         <option value="funcionamento" ${os.status === 'funcionamento' ? 'selected' : ''}>No Conserto</option>
         <option value="concluida" ${os.status === 'concluida' ? 'selected' : ''}>Pronto</option>
       </select>
-      <button onclick="deleteOS('${os.id}')" class="bg-red-100 text-red-700 hover:bg-red-200 transition font-bold text-xs p-2.5 rounded flex-1">Excluir</button>
+      <button onclick="deleteOS('${os.id}')" class="bg-red-500/15 text-red-700 hover:bg-red-500/20 transition font-bold text-xs p-2.5 rounded flex-1">Excluir</button>
     </div>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <div class="border p-3 rounded bg-slate-50/50">
+      <div class="border p-3 rounded bg-neutral-800/50">
         <h4 class="text-xs font-bold uppercase">Adicionar Serviço</h4>
         <div class="flex gap-1 mt-1">
           <input type="text" id="add-srv-desc" placeholder="Procedimento" class="flex-1 text-xs p-1.5 border rounded">
           <input type="number" id="add-srv-price" placeholder="R$" class="w-16 text-xs p-1.5 border rounded">
-          <button onclick="addItemToOS('service')" class="bg-[#0056b3] text-white font-bold px-3 rounded">+</button>
+          <button onclick="addItemToOS('service')" class="bg-[#c62828] text-white font-bold px-3 rounded">+</button>
         </div>
       </div>
-      <div class="border p-3 rounded bg-slate-50/50">
+      <div class="border p-3 rounded bg-neutral-800/50">
         <h4 class="text-xs font-bold uppercase">Adicionar Peças</h4>
         <div class="flex gap-1 mt-1">
           <input type="text" id="add-part-desc" placeholder="Peça" class="flex-1 text-xs p-1.5 border rounded">
           <input type="number" id="add-part-price" placeholder="R$" class="w-12 text-xs p-1.5 border rounded">
           <input type="number" id="add-part-qty" value="1" class="w-8 text-xs p-1.5 border rounded text-center">
-          <button onclick="addItemToOS('part')" class="bg-[#0056b3] text-white font-bold px-3 rounded">+</button>
+          <button onclick="addItemToOS('part')" class="bg-[#c62828] text-white font-bold px-3 rounded">+</button>
         </div>
       </div>
     </div>
     <div class="space-y-1 text-xs">
-      <h3 class="font-bold text-slate-700">Serviços Executados</h3>
-      <ul class="divide-y bg-white border p-2 rounded-lg">
-        ${servicesList.map((s, idx) => `<li class="py-1 flex justify-between"><span>${s.desc}</span><div><span class="font-bold">R$ ${s.price.toFixed(2)}</span><button onclick="removeOSItem('service', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhum registrado.</p>'}
+      <h3 class="font-bold text-neutral-200">Serviços Executados</h3>
+      <ul class="divide-y bg-neutral-900 border p-2 rounded-lg">
+        ${servicesList.map((s, idx) => `<li class="py-1 flex justify-between"><span>${s.desc}</span><div><span class="font-bold">R$ ${s.price.toFixed(2)}</span><button onclick="removeOSItem('service', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-neutral-500">Nenhum registrado.</p>'}
       </ul>
-      <h3 class="font-bold text-slate-700 mt-2">Peças Utilizadas</h3>
-      <ul class="divide-y bg-white border p-2 rounded-lg">
-        ${partsList.map((p, idx) => `<li class="py-1 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeOSItem('part', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhuma registrada.</p>'}
+      <h3 class="font-bold text-neutral-200 mt-2">Peças Utilizadas</h3>
+      <ul class="divide-y bg-neutral-900 border p-2 rounded-lg">
+        ${partsList.map((p, idx) => `<li class="py-1 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeOSItem('part', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-neutral-500">Nenhuma registrada.</p>'}
       </ul>
-      <div class="bg-blue-50 border p-2.5 rounded-lg flex justify-between font-black text-blue-900 mt-2"><span>VALOR ACUMULADO:</span><span>R$ ${tot.toFixed(2)}</span></div>
-      ${os.status === 'concluida' ? `<div class="flex gap-2 mt-3"><button onclick="sharePDFViaSystem('order', '${os.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow">Compartilhar PDF</button></div>` : ''}
+      <div class="bg-red-500/10 border p-2.5 rounded-lg flex justify-between font-black text-red-300 mt-2"><span>VALOR ACUMULADO:</span><span>R$ ${tot.toFixed(2)}</span></div>
+      ${os.status === 'concluida' ? `<div class="flex gap-2 mt-3"><button onclick="sharePDFViaSystem('order', '${os.id}')" class="flex-1 bg-red-600 text-white font-bold py-2.5 rounded-lg transition shadow">Compartilhar PDF</button></div>` : ''}
     </div>`;
 }
 
@@ -692,8 +692,8 @@ function renderFinance() {
     if (tx.type === "entrada") totIn += tx.value;
     else totOut += tx.value;
     const item = document.createElement('div');
-    item.className = `p-2.5 rounded-lg border text-xs flex justify-between items-center ${tx.type === 'entrada' ? 'bg-emerald-50 border-emerald-100 text-emerald-900' : 'bg-red-50 border-red-100 text-red-900'}`;
-    item.innerHTML = `<div><p class="font-bold">${tx.description}</p><p class="text-[9px] text-slate-500">${tx.date}</p></div><div><span class="font-black">${tx.type === 'entrada' ? '+' : '-'} R$ ${tx.value.toFixed(2)}</span></div>`;
+    item.className = `p-2.5 rounded-lg border text-xs flex justify-between items-center ${tx.type === 'entrada' ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300' : 'bg-red-500/10 border-red-500/20 text-red-300'}`;
+    item.innerHTML = `<div><p class="font-bold">${tx.description}</p><p class="text-[9px] text-neutral-400">${tx.date}</p></div><div><span class="font-black">${tx.type === 'entrada' ? '+' : '-'} R$ ${tx.value.toFixed(2)}</span></div>`;
     ledgerEl.appendChild(item);
   });
   inflowsEl.textContent = `R$ ${totIn.toFixed(2)}`;
@@ -725,7 +725,7 @@ function resetHistoryScreen() {
   const input = document.getElementById("history-search-input");
   if (input) input.value = "";
   const results = document.getElementById("history-results");
-  if (results) results.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">Insira uma placa de veículo acima para consultar o histórico clínico de revisões.</div>`;
+  if (results) results.innerHTML = `<div class="text-center py-10 text-neutral-500 text-xs">Insira uma placa de veículo acima para consultar o histórico clínico de revisões.</div>`;
 }
 
 function searchVehicleHistory() {
@@ -744,23 +744,23 @@ function searchVehicleHistory() {
   const matched = clients.filter(c => cleanPlateNumber(c.plate) === plateQueryClean);
   const client = matched[0];
   if (!client) {
-    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-50 border rounded-xl">Placa "${rawInput.toUpperCase()}" não localizada.</div>`;
+    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-500/10 border rounded-xl">Placa "${rawInput.toUpperCase()}" não localizada.</div>`;
     return;
   }
 
   const vOrders = orders.filter(o => o.clientId === client.id);
   if (vOrders.length === 0) {
-    container.innerHTML = `<div class="bg-white p-4 border rounded-xl space-y-2"><h3 class="font-bold text-xs uppercase">${client.name}</h3><p class="text-[10px] text-slate-500">Placa: ${client.plate}</p><div class="text-center py-6 text-slate-400 text-xs border-t border-dashed mt-2">Nenhuma OS aberta ainda.</div></div>`;
+    container.innerHTML = `<div class="bg-neutral-900 p-4 border rounded-xl space-y-2"><h3 class="font-bold text-xs uppercase">${client.name}</h3><p class="text-[10px] text-neutral-400">Placa: ${client.plate}</p><div class="text-center py-6 text-neutral-500 text-xs border-t border-dashed mt-2">Nenhuma OS aberta ainda.</div></div>`;
     return;
   }
 
   vOrders.sort((a, b) => b.id.localeCompare(a.id));
-  let html = `<div class="bg-white p-3 border rounded-xl space-y-1"><h3 class="font-black text-sm uppercase">${client.name}</h3><p class="text-[10px] text-slate-500">Veículo: ${client.carModel} | Contato: ${client.phone}</p></div><h3 class="text-xs font-bold text-slate-500 uppercase mt-4 mb-2">Linha do Tempo</h3><div class="space-y-3">`;
+  let html = `<div class="bg-neutral-900 p-3 border rounded-xl space-y-1"><h3 class="font-black text-sm uppercase">${client.name}</h3><p class="text-[10px] text-neutral-400">Veículo: ${client.carModel} | Contato: ${client.phone}</p></div><h3 class="text-xs font-bold text-neutral-400 uppercase mt-4 mb-2">Linha do Tempo</h3><div class="space-y-3">`;
   vOrders.forEach(os => {
     const sList = os.services || [];
     const pList = os.parts || [];
     const tot = sList.reduce((a, s) => a + s.price, 0) + pList.reduce((a, p) => a + (p.price * p.qty), 0);
-    html += `<div class="bg-slate-50 border rounded-xl p-3 space-y-2"><div class="flex justify-between items-center border-b border-dashed pb-1.5"><span class="text-[10px] text-slate-400 font-bold">Data: ${os.date}</span><span class="text-[10px] font-black">OS ${formatSeqNumber(os.seqNumber)}</span></div><p class="text-xs">"${os.problem}"</p><div class="text-[11px] bg-white p-2 rounded border">${sList.map(s => `<p class="text-slate-500">- ${s.desc}</p>`).join("")}${pList.map(p => `<p class="text-slate-500">- ${p.desc} (x${p.qty})</p>`).join("")}</div><div class="flex justify-between items-center text-[11px]"><span>Status: ${os.status}</span><span class="font-bold text-emerald-600">R$ ${tot.toFixed(2)}</span></div></div>`;
+    html += `<div class="bg-black border rounded-xl p-3 space-y-2"><div class="flex justify-between items-center border-b border-dashed pb-1.5"><span class="text-[10px] text-neutral-500 font-bold">Data: ${os.date}</span><span class="text-[10px] font-black">OS ${formatSeqNumber(os.seqNumber)}</span></div><p class="text-xs">"${os.problem}"</p><div class="text-[11px] bg-neutral-900 p-2 rounded border">${sList.map(s => `<p class="text-neutral-400">- ${s.desc}</p>`).join("")}${pList.map(p => `<p class="text-neutral-400">- ${p.desc} (x${p.qty})</p>`).join("")}</div><div class="flex justify-between items-center text-[11px]"><span>Status: ${os.status}</span><span class="font-bold text-emerald-600">R$ ${tot.toFixed(2)}</span></div></div>`;
   });
   container.innerHTML = html + `</div>`;
 }
@@ -836,18 +836,18 @@ function renderInventory() {
   const filtered = inventory.filter(p => p.name.includes(searchQuery));
 
   if (filtered.length === 0) {
-    body.innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-center text-slate-400">Nenhuma peça encontrada.</td></tr>`;
+    body.innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-center text-neutral-500">Nenhuma peça encontrada.</td></tr>`;
     return;
   }
 
   body.innerHTML = filtered.map(p => `
-    <tr class="border-b border-slate-100 hover:bg-slate-50">
-      <td class="px-4 py-3 font-medium text-slate-900">${p.name}</td>
+    <tr class="border-b border-neutral-800 hover:bg-neutral-800">
+      <td class="px-4 py-3 font-medium text-neutral-100">${p.name}</td>
       <td class="px-4 py-3 text-center">${p.qty}</td>
       <td class="px-4 py-3 text-right">R$ ${p.price.toFixed(2)}</td>
       <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
-        <button onclick="editInventoryPart('${p.id}')" class="text-blue-600 hover:text-blue-800 font-bold px-1.5 py-0.5">Editar</button>
-        <button onclick="deleteInventoryPart('${p.id}')" class="text-red-600 hover:text-red-800 font-bold px-1.5 py-0.5">Excluir</button>
+        <button onclick="editInventoryPart('${p.id}')" class="text-red-500 hover:text-red-400 font-bold px-1.5 py-0.5">Editar</button>
+        <button onclick="deleteInventoryPart('${p.id}')" class="text-red-600 hover:text-red-400 font-bold px-1.5 py-0.5">Excluir</button>
       </td>
     </tr>
   `).join("");
