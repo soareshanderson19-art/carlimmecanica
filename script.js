@@ -1,5 +1,5 @@
-// Configurações Oficiais do Firebase
-const OFICINA_WHATSAPP = "99999999999";
+  // Configurações Oficiais do Firebase
+const OFICINA_WHATSAPP = "5562985153191";
 const OFICINA_NOME = "Mecânica do Carlim";
 const OFICINA_ENDERECO = "Manutenção Automotiva Geral - Carlim";
 
@@ -22,6 +22,7 @@ let clients = [];
 let quotes = [];
 let orders = [];
 let transactions = [];
+let inventory = [];
 let tempQuoteItems = { services: [], parts: [] };
 let activeOSDetailId = null;
 let activeOSFilter = "todas";
@@ -46,6 +47,24 @@ function getWhatsAppUrl(phone) {
 
 function formatSeqNumber(num) {
   return num ? "#" + String(num).padStart(2, '0') : "#01";
+}
+
+// Funções Auxiliares de Sanitização
+function cleanPlateNumber(plate) {
+  return String(plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+// Controle de Barra Lateral Responsiva
+function toggleSidebar(show) {
+  const sidebar = document.querySelector('aside');
+  const overlay = document.getElementById('sidebar-overlay');
+  if (show) {
+    sidebar.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
 }
 
 // Funções de UI (Toast/Confirm)
@@ -209,9 +228,14 @@ function startRealtimeSync() {
     transactions = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
     renderFinance();
   });
+  db.collection("inventory").onSnapshot(snap => {
+    inventory = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    renderInventory();
+  });
 }
 
 function switchScreen(screenId) {
+  toggleSidebar(false); // Fecha menu lateral em celulares ao mudar de tela
   document.querySelectorAll('main').forEach(m => m.classList.add('hidden'));
   document.getElementById(`screen-${screenId}`).classList.remove('hidden');
   populateClientSelects();
@@ -220,15 +244,17 @@ function switchScreen(screenId) {
   else if (screenId === 'os-list') renderOSList();
   else if (screenId === 'quotes-list') renderQuotesPipeline();
   else if (screenId === 'finance') renderFinance();
+  else if (screenId === 'inventory') renderInventory();
 }
 
 // Funções de Cliente (Direto no Firebase)
 document.getElementById('form-client')?.addEventListener('submit', function(e) {
   e.preventDefault();
+  const rawPlate = document.getElementById('client-plate').value;
   const c = {
     name: document.getElementById('client-name').value.toUpperCase(),
     phone: document.getElementById('client-phone').value,
-    plate: document.getElementById('client-plate').value.toUpperCase(),
+    plate: cleanPlateNumber(rawPlate), // Armazena a placa sem hífens ou espaços
     carBrand: document.getElementById('client-car-brand').value.toUpperCase(),
     carModel: document.getElementById('client-car-model').value.toUpperCase(),
     carYear: document.getElementById('client-car-year').value
@@ -282,10 +308,11 @@ function closeEditModal() {
 
 function saveEditedClient() {
   const id = document.getElementById('edit-client-id').value;
+  const rawPlate = document.getElementById('edit-client-plate').value;
   const updatedData = {
     name: document.getElementById('edit-client-name').value.toUpperCase(),
     phone: document.getElementById('edit-client-phone').value,
-    plate: document.getElementById('edit-client-plate').value.toUpperCase(),
+    plate: cleanPlateNumber(rawPlate),
     carBrand: document.getElementById('edit-client-car-brand').value.toUpperCase(),
     carModel: document.getElementById('edit-client-car-model').value.toUpperCase(),
     carYear: document.getElementById('edit-client-car-year').value
@@ -317,7 +344,9 @@ function renderQuotesPipeline() {
         const c = clients.find(cl => cl.id === q.clientId) || { name: "Removido" };
         const status = q.status === "aguardando" ? `<span class="text-[9px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded">Aguardando</span>` : q.status === "aprovado" ? `<span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-2 py-0.5 rounded">Aprovado</span>` : `<span class="text-[9px] bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">Recusado</span>`;
         const act = q.status === "aguardando" ? `<button onclick="approveQuote('${q.id}')" class="flex-1 bg-emerald-600 text-white font-bold py-1.5 rounded text-[10px]">Aprovar e OS</button>` : "";
-        const tot = q.services.reduce((a, s) => a + s.price, 0) + q.parts.reduce((a, p) => a + (p.price * p.qty), 0);
+        const servicesList = q.services || [];
+        const partsList = q.parts || [];
+        const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
         return `
           <div class="bg-white p-3 border border-slate-200 rounded-xl shadow-sm space-y-3">
             <div class="flex justify-between items-start">
@@ -398,6 +427,9 @@ function removeQuoteItem(type, index) {
   renderQuoteFormItems();
 }
 
+// -------------------------------------------------------------
+// RENDERIZAÇÃO E EXECUÇÃO DE OUTRAS TABS DO SISTEMA
+// -------------------------------------------------------------
 function renderQuoteFormItems() {
   const servicesList = document.getElementById('quote-services-list');
   const partsList = document.getElementById('quote-parts-list');
@@ -406,18 +438,6 @@ function renderQuoteFormItems() {
   if (partsList) partsList.innerHTML = tempQuoteItems.parts.map((p, i) => `<li class="py-1.5 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeQuoteItem('part', ${i})" class="text-red-500 ml-2">✕</button></div></li>`).join("");
   const total = tempQuoteItems.services.reduce((a, s) => a + s.price, 0) + tempQuoteItems.parts.reduce((a, p) => a + (p.price * p.qty), 0);
   if (totalPreview) totalPreview.textContent = `R$ ${total.toFixed(2)}`;
-}
-
-function resetQuoteForm() {
-  tempQuoteItems = { services: [], parts: [] };
-  ['quote-service-desc', 'quote-service-price', 'quote-part-desc', 'quote-part-price', 'quote-problem-desc', 'quote-inspection-notes', 'quote-odometer'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  document.getElementById('quote-part-qty').value = '1';
-  document.getElementById('quote-fuel').value = '1/2';
-  ['quote-chk-lataria', 'quote-chk-estepe', 'quote-chk-ferramentas', 'quote-chk-triangulo', 'quote-chk-luzes', 'quote-chk-radio'].forEach(id => {
-    const chk = document.getElementById(id);
-    if (chk) chk.checked = false;
-  });
-  renderQuoteFormItems();
 }
 
 function approveQuote(quoteId) {
@@ -434,7 +454,6 @@ function approveQuote(quoteId) {
   });
 }
 
-// Ordens de Serviço (OS)
 function filterOS(status) {
   activeOSFilter = status;
   ['todas', 'aberta', 'funcionamento', 'concluida'].forEach(tab => {
@@ -451,19 +470,21 @@ function renderOSList() {
   let filtered = activeOSFilter === "todas" ? orders : orders.filter(o => o.status === activeOSFilter);
   container.innerHTML = filtered.map(os => {
     const c = clients.find(cl => cl.id === os.clientId) || { name: "Removido", carModel: "N/A" };
-    const tot = os.services.reduce((a, s) => a + s.price, 0) + os.parts.reduce((a, p) => a + (p.price * p.qty), 0);
+    const servicesList = os.services || [];
+    const partsList = os.parts || [];
+    const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
     return `
       <div class="bg-white p-3 border border-slate-200 rounded-xl shadow-sm flex flex-col justify-between">
-        <div class="flex justify-between items-start" onclick="openOSDetail('${os.id}')">
+        <div class="flex justify-between items-start cursor-pointer" onclick="openOSDetail('${os.id}')">
           <div class="flex items-start gap-2.5">
             <div class="w-7 h-7 rounded-full border-2 flex items-center justify-center font-bold text-xs">···</div>
             <div><h4 class="font-bold text-xs text-slate-800 uppercase">${c.name}</h4><p class="text-[10px] text-slate-500">"${os.problem}"</p></div>
           </div>
           <div class="text-right"><span class="text-[9px] font-bold px-2 py-0.5 rounded bg-slate-100">${os.status}</span><p class="text-[10px] font-bold text-slate-500 mt-1">${formatSeqNumber(os.seqNumber)}</p></div>
         </div>
-        <div class="border-t border-dashed border-slate-200 my-2 pt-2 flex justify-between items-center text-[10px]">
+        <div class="border-t border-dashed border-slate-200 my-2 pt-2 flex flex-col sm:flex-row gap-2 justify-between items-start sm:items-center text-[10px]">
           <span>Carro: <strong>${c.carModel}</strong> (${c.plate})</span>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 justify-between w-full sm:w-auto">
             <span class="font-bold text-slate-800 text-[11px] bg-slate-100 px-1.5 py-0.5 rounded">R$ ${tot.toFixed(2)}</span>
             <button onclick="openOSDetail('${os.id}')" class="text-[#0056b3] font-bold">Ver Processo &rarr;</button>
           </div>
@@ -478,7 +499,9 @@ function renderDashboardOS() {
   const activeOS = orders.filter(o => o.status !== "concluida");
   container.innerHTML = activeOS.map(os => {
     const c = clients.find(cl => cl.id === os.clientId) || { name: "Desconhecido", carModel: "N/A" };
-    const tot = os.services.reduce((a, s) => a + s.price, 0) + os.parts.reduce((a, p) => a + (p.price * p.qty), 0);
+    const servicesList = os.services || [];
+    const partsList = os.parts || [];
+    const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
     return `
       <div class="bg-slate-50 p-3 border border-slate-200 rounded-xl shadow-sm space-y-2">
         <div class="flex justify-between items-start cursor-pointer" onclick="openOSDetail('${os.id}')">
@@ -510,7 +533,9 @@ function renderOSDetailContent() {
   const container = document.getElementById('os-detail-card');
   if (!os || !container) return;
   const c = clients.find(cl => cl.id === os.clientId) || { name: "N/A", carModel: "N/A" };
-  const tot = os.services.reduce((a, s) => a + s.price, 0) + os.parts.reduce((a, p) => a + (p.price * p.qty), 0);
+  const servicesList = os.services || [];
+  const partsList = os.parts || [];
+  const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
   const insp = os.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." };
 
   container.innerHTML = `
@@ -533,20 +558,20 @@ function renderOSDetailContent() {
       </div>
       <p class="text-[10px] italic border-t pt-1 mt-1">Obs: "${insp.notes}"</p>
     </div>
-    <div class="flex gap-2">
-      <select onchange="updateOSStatus(this.value)" class="flex-1 text-xs p-2 border rounded bg-white">
+    <div class="flex gap-2 flex-wrap">
+      <select onchange="updateOSStatus(this.value)" class="flex-1 min-w-[120px] text-xs p-2 border rounded bg-white">
         <option value="aberta" ${os.status === 'aberta' ? 'selected' : ''}>Em Aberto</option>
         <option value="funcionamento" ${os.status === 'funcionamento' ? 'selected' : ''}>No Conserto</option>
         <option value="concluida" ${os.status === 'concluida' ? 'selected' : ''}>Pronto</option>
       </select>
-      <button onclick="deleteOS('${os.id}')" class="bg-red-100 text-red-700 font-bold text-xs p-2.5 rounded">Excluir</button>
+      <button onclick="deleteOS('${os.id}')" class="bg-red-100 text-red-700 hover:bg-red-200 transition font-bold text-xs p-2.5 rounded flex-1">Excluir</button>
     </div>
-    <div class="space-y-3">
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div class="border p-3 rounded bg-slate-50/50">
         <h4 class="text-xs font-bold uppercase">Adicionar Serviço</h4>
         <div class="flex gap-1 mt-1">
           <input type="text" id="add-srv-desc" placeholder="Procedimento" class="flex-1 text-xs p-1.5 border rounded">
-          <input type="number" id="add-srv-price" placeholder="R$" class="w-20 text-xs p-1.5 border rounded">
+          <input type="number" id="add-srv-price" placeholder="R$" class="w-16 text-xs p-1.5 border rounded">
           <button onclick="addItemToOS('service')" class="bg-[#0056b3] text-white font-bold px-3 rounded">+</button>
         </div>
       </div>
@@ -554,8 +579,8 @@ function renderOSDetailContent() {
         <h4 class="text-xs font-bold uppercase">Adicionar Peças</h4>
         <div class="flex gap-1 mt-1">
           <input type="text" id="add-part-desc" placeholder="Peça" class="flex-1 text-xs p-1.5 border rounded">
-          <input type="number" id="add-part-price" placeholder="R$" class="w-16 text-xs p-1.5 border rounded">
-          <input type="number" id="add-part-qty" value="1" class="w-10 text-xs p-1.5 border rounded text-center">
+          <input type="number" id="add-part-price" placeholder="R$" class="w-12 text-xs p-1.5 border rounded">
+          <input type="number" id="add-part-qty" value="1" class="w-8 text-xs p-1.5 border rounded text-center">
           <button onclick="addItemToOS('part')" class="bg-[#0056b3] text-white font-bold px-3 rounded">+</button>
         </div>
       </div>
@@ -563,11 +588,11 @@ function renderOSDetailContent() {
     <div class="space-y-1 text-xs">
       <h3 class="font-bold text-slate-700">Serviços Executados</h3>
       <ul class="divide-y bg-white border p-2 rounded-lg">
-        ${os.services.map((s, idx) => `<li class="py-1 flex justify-between"><span>${s.desc}</span><div><span class="font-bold">R$ ${s.price.toFixed(2)}</span><button onclick="removeOSItem('service', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhum registrado.</p>'}
+        ${servicesList.map((s, idx) => `<li class="py-1 flex justify-between"><span>${s.desc}</span><div><span class="font-bold">R$ ${s.price.toFixed(2)}</span><button onclick="removeOSItem('service', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhum registrado.</p>'}
       </ul>
       <h3 class="font-bold text-slate-700 mt-2">Peças Utilizadas</h3>
       <ul class="divide-y bg-white border p-2 rounded-lg">
-        ${os.parts.map((p, idx) => `<li class="py-1 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeOSItem('part', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhuma registrada.</p>'}
+        ${partsList.map((p, idx) => `<li class="py-1 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeOSItem('part', idx)" class="text-red-500 ml-2">✕</button></div></li>`).join("") || '<p class="text-slate-400">Nenhuma registrada.</p>'}
       </ul>
       <div class="bg-blue-50 border p-2.5 rounded-lg flex justify-between font-black text-blue-900 mt-2"><span>VALOR ACUMULADO:</span><span>R$ ${tot.toFixed(2)}</span></div>
       ${os.status === 'concluida' ? `<div class="flex gap-2 mt-3"><button onclick="sharePDFViaSystem('order', '${os.id}')" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-lg transition shadow">Compartilhar PDF</button></div>` : ''}
@@ -580,39 +605,41 @@ function updateOSStatus(val) {
   const old = os.status;
   os.status = val;
   if (val === "concluida" && old !== "concluida") {
-    const tot = os.services.reduce((a, s) => a + s.price, 0) + os.parts.reduce((a, p) => a + (p.price * p.qty), 0);
+    const servicesList = os.services || [];
+    const partsList = os.parts || [];
+    const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
     if (tot > 0 && !transactions.some(t => t.description === `OS #${os.id} - Serviço Finalizado`)) {
       const tx = { id: "tx-" + Date.now().toString(), type: "entrada", description: `OS #${os.id} - Serviço Finalizado`, value: tot, date: new Date().toLocaleDateString('pt-BR') };
       db.collection("transactions").doc(tx.id).set(tx);
     }
   }
-  db.collection("orders").doc(os.id).update({ status: val }).then(() => renderOSDetailContent());
+  db.collection("orders").doc(os.id).update({ status: val });
 }
 
 function addItemToOS(type) {
   const os = orders.find(o => o.id === activeOSDetailId);
   if (!os) return;
+  const servicesList = os.services || [];
+  const partsList = os.parts || [];
   if (type === 'service') {
     const desc = document.getElementById('add-srv-desc').value.toUpperCase();
     const price = parseFloat(document.getElementById('add-srv-price').value);
     if (!desc || isNaN(price)) return;
-    os.services.push({ desc, price });
-    db.collection("orders").doc(os.id).update({ services: os.services }).then(() => {
+    servicesList.push({ desc, price });
+    db.collection("orders").doc(os.id).update({ services: servicesList }).then(() => {
       document.getElementById('add-srv-desc').value = '';
       document.getElementById('add-srv-price').value = '';
-      renderOSDetailContent();
     });
   } else {
     const desc = document.getElementById('add-part-desc').value.toUpperCase();
     const price = parseFloat(document.getElementById('add-part-price').value);
     const qty = parseInt(document.getElementById('add-part-qty').value) || 1;
     if (!desc || isNaN(price)) return;
-    os.parts.push({ desc, price, qty });
-    db.collection("orders").doc(os.id).update({ parts: os.parts }).then(() => {
+    partsList.push({ desc, price, qty });
+    db.collection("orders").doc(os.id).update({ parts: partsList }).then(() => {
       document.getElementById('add-part-desc').value = '';
       document.getElementById('add-part-price').value = '';
       document.getElementById('add-part-qty').value = '1';
-      renderOSDetailContent();
     });
   }
 }
@@ -620,9 +647,14 @@ function addItemToOS(type) {
 function removeOSItem(type, index) {
   const os = orders.find(o => o.id === activeOSDetailId);
   if (!os) return;
-  if (type === 'service') os.services.splice(index, 1);
-  else os.parts.splice(index, 1);
-  db.collection("orders").doc(os.id).update(type === 'service' ? { services: os.services } : { parts: os.parts }).then(() => renderOSDetailContent());
+  const servicesList = os.services || [];
+  const partsList = os.parts || [];
+  if (type === 'service') {
+    servicesList.splice(index, 1);
+  } else {
+    partsList.splice(index, 1);
+  }
+  db.collection("orders").doc(os.id).update(type === 'service' ? { services: servicesList } : { parts: partsList });
 }
 
 function deleteOS(id) {
@@ -688,16 +720,18 @@ function searchVehicleHistory() {
   const container = document.getElementById("history-results");
   if (!input || !container) return;
 
-  const plateQuery = input.value.trim().toUpperCase();
-  if (plateQuery === "") {
+  const rawInput = input.value;
+  const plateQueryClean = cleanPlateNumber(rawInput);
+  if (plateQueryClean === "") {
     showToast("Digite uma placa para pesquisar.", 'warning');
     return;
   }
 
-  const matched = clients.filter(c => c.plate === plateQuery);
+  // Busca normalizada comparando as placas sem hifens ou espaços
+  const matched = clients.filter(c => cleanPlateNumber(c.plate) === plateQueryClean);
   const client = matched[0];
   if (!client) {
-    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-50 border rounded-xl">Placa "${plateQuery}" não localizada.</div>`;
+    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-50 border rounded-xl">Placa "${rawInput.toUpperCase()}" não localizada.</div>`;
     return;
   }
 
@@ -710,13 +744,216 @@ function searchVehicleHistory() {
   vOrders.sort((a, b) => b.id.localeCompare(a.id));
   let html = `<div class="bg-white p-3 border rounded-xl space-y-1"><h3 class="font-black text-sm uppercase">${client.name}</h3><p class="text-[10px] text-slate-500">Veículo: ${client.carModel} | Contato: ${client.phone}</p></div><h3 class="text-xs font-bold text-slate-500 uppercase mt-4 mb-2">Linha do Tempo</h3><div class="space-y-3">`;
   vOrders.forEach(os => {
-    const tot = os.services.reduce((a, s) => a + s.price, 0) + os.parts.reduce((a, p) => a + (p.price * p.qty), 0);
-    html += `<div class="bg-slate-50 border rounded-xl p-3 space-y-2"><div class="flex justify-between items-center border-b border-dashed pb-1.5"><span class="text-[10px] text-slate-400 font-bold">Data: ${os.date}</span><span class="text-[10px] font-black">OS ${formatSeqNumber(os.seqNumber)}</span></div><p class="text-xs">"${os.problem}"</p><div class="text-[11px] bg-white p-2 rounded border">${os.services.map(s => `<p class="text-slate-500">- ${s.desc}</p>`).join("")}${os.parts.map(p => `<p class="text-slate-500">- ${p.desc} (x${p.qty})</p>`).join("")}</div><div class="flex justify-between items-center text-[11px]"><span>Status: ${os.status}</span><span class="font-bold text-emerald-600">R$ ${tot.toFixed(2)}</span></div></div>`;
+    const sList = os.services || [];
+    const pList = os.parts || [];
+    const tot = sList.reduce((a, s) => a + s.price, 0) + pList.reduce((a, p) => a + (p.price * p.qty), 0);
+    html += `<div class="bg-slate-50 border rounded-xl p-3 space-y-2"><div class="flex justify-between items-center border-b border-dashed pb-1.5"><span class="text-[10px] text-slate-400 font-bold">Data: ${os.date}</span><span class="text-[10px] font-black">OS ${formatSeqNumber(os.seqNumber)}</span></div><p class="text-xs">"${os.problem}"</p><div class="text-[11px] bg-white p-2 rounded border">${sList.map(s => `<p class="text-slate-500">- ${s.desc}</p>`).join("")}${pList.map(p => `<p class="text-slate-500">- ${p.desc} (x${p.qty})</p>`).join("")}</div><div class="flex justify-between items-center text-[11px]"><span>Status: ${os.status}</span><span class="font-bold text-emerald-600">R$ ${tot.toFixed(2)}</span></div></div>`;
   });
   container.innerHTML = html + `</div>`;
 }
 
-// PDF Creator
+// -------------------------------------------------------------
+// SISTEMA DE ESTOQUE (INVENTORY CRUD)
+// -------------------------------------------------------------
+function handleInventorySubmit(e) {
+  e.preventDefault();
+  const partId = document.getElementById('inventory-part-id').value;
+  const name = document.getElementById('inventory-name').value.toUpperCase().trim();
+  const qty = parseInt(document.getElementById('inventory-qty').value) || 0;
+  const price = parseFloat(document.getElementById('inventory-price').value) || 0;
+
+  if (!name || qty < 0 || price < 0) {
+    showToast("Preencha todos os campos corretamente.", "error");
+    return;
+  }
+
+  const data = { name, qty, price };
+
+  if (partId) {
+    db.collection("inventory").doc(partId).update(data)
+      .then(() => {
+        showToast("Peça atualizada no estoque!", "success");
+        clearInventoryForm();
+      })
+      .catch(err => showToast("Erro ao atualizar: " + err.message, "error"));
+  } else {
+    db.collection("inventory").add(data)
+      .then(() => {
+        showToast("Peça adicionada ao estoque!", "success");
+        clearInventoryForm();
+      })
+      .catch(err => showToast("Erro ao adicionar: " + err.message, "error"));
+  }
+}
+
+function clearInventoryForm() {
+  document.getElementById('inventory-part-id').value = "";
+  document.getElementById('inventory-name').value = "";
+  document.getElementById('inventory-qty').value = "";
+  document.getElementById('inventory-price').value = "";
+  document.getElementById('inventory-form-title').textContent = "Nova Peça";
+  document.getElementById('inventory-btn-cancel').classList.add('hidden');
+  document.getElementById('inventory-btn-submit').textContent = "Salvar Peça";
+}
+
+function editInventoryPart(id) {
+  const part = inventory.find(p => p.id === id);
+  if (!part) return;
+  document.getElementById('inventory-part-id').value = part.id;
+  document.getElementById('inventory-name').value = part.name;
+  document.getElementById('inventory-qty').value = part.qty;
+  document.getElementById('inventory-price').value = part.price;
+  document.getElementById('inventory-form-title').textContent = "Editar Peça";
+  document.getElementById('inventory-btn-cancel').classList.remove('hidden');
+  document.getElementById('inventory-btn-submit').textContent = "Atualizar";
+}
+
+function deleteInventoryPart(id) {
+  showConfirm("Deseja realmente excluir esta peça do estoque?", () => {
+    db.collection("inventory").doc(id).delete()
+      .then(() => showToast("Peça excluída do estoque.", "info"))
+      .catch(err => showToast("Erro ao excluir: " + err.message, "error"));
+  });
+}
+
+function renderInventory() {
+  const body = document.getElementById('inventory-table-body');
+  if (!body) return;
+  const searchQuery = document.getElementById('inventory-search').value.toUpperCase().trim();
+  const filtered = inventory.filter(p => p.name.includes(searchQuery));
+
+  if (filtered.length === 0) {
+    body.innerHTML = `<tr><td colspan="4" class="px-4 py-4 text-center text-slate-400">Nenhuma peça encontrada.</td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(p => `
+    <tr class="border-b border-slate-100 hover:bg-slate-50">
+      <td class="px-4 py-3 font-medium text-slate-900">${p.name}</td>
+      <td class="px-4 py-3 text-center">${p.qty}</td>
+      <td class="px-4 py-3 text-right">R$ ${p.price.toFixed(2)}</td>
+      <td class="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+        <button onclick="editInventoryPart('${p.id}')" class="text-blue-600 hover:text-blue-800 font-bold px-1.5 py-0.5">Editar</button>
+        <button onclick="deleteInventoryPart('${p.id}')" class="text-red-600 hover:text-red-800 font-bold px-1.5 py-0.5">Excluir</button>
+      </td>
+    </tr>
+  `).join("");
+}
+
+function exportInventoryToPDF() {
+  const jsPDFObj = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
+  if (!jsPDFObj) { showToast("Erro: Biblioteca jsPDF não carregada.", 'error'); return; }
+
+  showToast("Gerando PDF do estoque...", 'info', 2000);
+
+  const doc = new jsPDFObj('p', 'mm', 'a4');
+  let y = 15;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(30, 58, 138); // Cor azul escura padrão do sistema
+  doc.text(OFICINA_NOME.toUpperCase(), 15, y);
+
+  doc.setFontSize(10);
+  doc.setTextColor(15, 23, 42);
+  doc.text("ESTOQUE DE PECAS", 195, y, { align: "right" });
+
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text(OFICINA_ENDERECO, 15, y);
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  doc.text(`DATA DE EMISSAO: ${new Date().toLocaleDateString('pt-BR')}`, 195, y, { align: "right" });
+
+  y += 4;
+  doc.setDrawColor(30, 58, 138);
+  doc.setLineWidth(0.8);
+  doc.line(15, y, 195, y);
+
+  y += 10;
+  // Cabeçalho da tabela
+  doc.setFillColor(241, 245, 249);
+  doc.rect(15, y, 180, 7, "F");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(8.5);
+  doc.setTextColor(51, 65, 85);
+  doc.text("Descricao da Peca / Codigo", 18, y + 4.5);
+  doc.text("Quantidade", 120, y + 4.5, { align: "center" });
+  doc.text("Valor Unit.", 155, y + 4.5, { align: "right" });
+  doc.text("Valor Total", 192, y + 4.5, { align: "right" });
+
+  doc.setFont("helvetica", "normal");
+  doc.setTextColor(15, 23, 42);
+  doc.setDrawColor(203, 213, 225);
+  doc.setLineWidth(0.15);
+
+  let grandTotal = 0;
+
+  if (inventory.length === 0) {
+    y += 7;
+    doc.rect(15, y, 180, 7);
+    doc.text("Nenhuma peca cadastrada no estoque.", 18, y + 4.5);
+  } else {
+    inventory.forEach(p => {
+      const itemTotal = p.qty * p.price;
+      grandTotal += itemTotal;
+      y += 7;
+
+      // Verificação para paginação segura
+      if (y > 270) {
+        doc.addPage();
+        y = 15;
+        // Desenha o cabeçalho novamente na nova página
+        doc.setFillColor(241, 245, 249);
+        doc.rect(15, y, 180, 7, "F");
+        doc.setFont("helvetica", "bold");
+        doc.text("Descricao da Peca / Codigo", 18, y + 4.5);
+        doc.text("Quantidade", 120, y + 4.5, { align: "center" });
+        doc.text("Valor Unit.", 155, y + 4.5, { align: "right" });
+        doc.text("Valor Total", 192, y + 4.5, { align: "right" });
+        doc.setFont("helvetica", "normal");
+        y += 7;
+      }
+
+      doc.rect(15, y, 180, 7);
+      doc.text(p.name, 18, y + 4.5);
+      doc.text(String(p.qty), 120, y + 4.5, { align: "center" });
+      doc.text(`R$ ${p.price.toFixed(2)}`, 155, y + 4.5, { align: "right" });
+      doc.text(`R$ ${itemTotal.toFixed(2)}`, 192, y + 4.5, { align: "right" });
+    });
+  }
+
+  y += 12;
+  if (y > 270) {
+    doc.addPage();
+    y = 15;
+  }
+  doc.setFillColor(248, 250, 252);
+  doc.rect(130, y, 65, 20, "FD");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(30, 58, 138);
+  doc.text("VALOR TOTAL DO ESTOQUE:", 135, y + 7);
+  doc.setFontSize(14);
+  doc.text(`R$ ${grandTotal.toFixed(2)}`, 135, y + 15);
+
+  const filename = `estoque_mecanica_carlim_${new Date().toISOString().slice(0,10)}.pdf`;
+  const pdfBlob = doc.output('blob');
+  const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
+  const filesArray = [pdfFile];
+
+  if (navigator.canShare && navigator.canShare({ files: filesArray })) {
+    navigator.share({ files: filesArray, title: 'Estoque de Peças', text: `Mecânica do Carlim - PDF.` }).catch(() => {});
+  } else {
+    showToast("Baixando arquivo...", 'warning');
+    doc.save(filename);
+  }
+}
+
+// PDF Creator (Clientes/OS)
 function sharePDFViaSystem(type, id) {
   const isQuote = type === 'quote';
   const docData = isQuote ? quotes.find(q => q.id === id) : orders.find(o => o.id === id);
@@ -725,8 +962,8 @@ function sharePDFViaSystem(type, id) {
   const client = clients.find(c => c.id === docData.clientId) || { name: "Cliente", phone: "N/A", carModel: "N/A", plate: "N/A", carBrand: "N/A", carYear: "N/A" };
   const associatedOS = isQuote ? orders.find(o => o.id === "OS-" + docData.id) : null;
 
-  const activeServices = (isQuote && associatedOS) ? associatedOS.services : docData.services;
-  const activeParts = (isQuote && associatedOS) ? associatedOS.parts : docData.parts;
+  const activeServices = ((isQuote && associatedOS) ? associatedOS.services : docData.services) || [];
+  const activeParts = ((isQuote && associatedOS) ? associatedOS.parts : docData.parts) || [];
   const paymentMethod = (isQuote && associatedOS) ? (associatedOS.paymentMethod || "pix") : (docData.paymentMethod || "pix");
   const odometer = (isQuote && associatedOS) ? (associatedOS.odometer || "0") : (docData.odometer || "0");
   const insp = (isQuote && associatedOS) ? (associatedOS.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." }) : (docData.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." });
@@ -752,7 +989,6 @@ function sharePDFViaSystem(type, id) {
   let y = 15;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.text(OFICINA_NOME.toUpperCase(), 15, y);
   
   doc.setFontSize(10);
