@@ -1,5 +1,5 @@
-  // Configurações Oficiais do Firebase
-const OFICINA_WHATSAPP = "5562985153191";
+// Configurações Oficiais do Firebase
+const OFICINA_WHATSAPP = "99999999999";
 const OFICINA_NOME = "Mecânica do Carlim";
 const OFICINA_ENDERECO = "Manutenção Automotiva Geral - Carlim";
 
@@ -58,12 +58,14 @@ function cleanPlateNumber(plate) {
 function toggleSidebar(show) {
   const sidebar = document.querySelector('aside');
   const overlay = document.getElementById('sidebar-overlay');
-  if (show) {
-    sidebar.classList.remove('-translate-x-full');
-    overlay.classList.remove('hidden');
-  } else {
-    sidebar.classList.add('-translate-x-full');
-    overlay.classList.add('hidden');
+  if (sidebar && overlay) {
+    if (show) {
+      sidebar.classList.remove('-translate-x-full');
+      overlay.classList.remove('hidden');
+    } else {
+      sidebar.classList.add('-translate-x-full');
+      overlay.classList.add('hidden');
+    }
   }
 }
 
@@ -84,6 +86,7 @@ function showConfirm(message, onConfirm) {
   const msgEl = document.getElementById('confirm-message');
   const btnOk = document.getElementById('confirm-ok');
   const btnCancel = document.getElementById('confirm-cancel');
+  if (!modal || !msgEl || !btnOk || !btnCancel) return;
   msgEl.textContent = message;
   modal.classList.remove('hidden');
   const close = () => modal.classList.add('hidden');
@@ -164,7 +167,7 @@ function handlePasswordChange() {
     .then(() => {
       user.updatePassword(newPass)
         .then(() => {
-          showToast("Senha alterada com sucesso!", "success");
+          showToast("Senha alteredada com sucesso!", "success");
           togglePasswordChange(false);
           document.getElementById('pass-email-confirm').value = '';
           document.getElementById('pass-current').value = '';
@@ -427,9 +430,6 @@ function removeQuoteItem(type, index) {
   renderQuoteFormItems();
 }
 
-// -------------------------------------------------------------
-// RENDERIZAÇÃO E EXECUÇÃO DE OUTRAS TABS DO SISTEMA
-// -------------------------------------------------------------
 function renderQuoteFormItems() {
   const servicesList = document.getElementById('quote-services-list');
   const partsList = document.getElementById('quote-parts-list');
@@ -438,6 +438,18 @@ function renderQuoteFormItems() {
   if (partsList) partsList.innerHTML = tempQuoteItems.parts.map((p, i) => `<li class="py-1.5 flex justify-between"><span>${p.desc} (x${p.qty})</span><div><span class="font-bold">R$ ${(p.price * p.qty).toFixed(2)}</span><button onclick="removeQuoteItem('part', ${i})" class="text-red-500 ml-2">✕</button></div></li>`).join("");
   const total = tempQuoteItems.services.reduce((a, s) => a + s.price, 0) + tempQuoteItems.parts.reduce((a, p) => a + (p.price * p.qty), 0);
   if (totalPreview) totalPreview.textContent = `R$ ${total.toFixed(2)}`;
+}
+
+function resetQuoteForm() {
+  tempQuoteItems = { services: [], parts: [] };
+  ['quote-service-desc', 'quote-service-price', 'quote-part-desc', 'quote-part-price', 'quote-problem-desc', 'quote-inspection-notes', 'quote-odometer'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  document.getElementById('quote-part-qty').value = '1';
+  document.getElementById('quote-fuel').value = '1/2';
+  ['quote-chk-lataria', 'quote-chk-estepe', 'quote-chk-ferramentas', 'quote-chk-triangulo', 'quote-chk-luzes', 'quote-chk-radio'].forEach(id => {
+    const chk = document.getElementById(id);
+    if (chk) chk.checked = false;
+  });
+  renderQuoteFormItems();
 }
 
 function approveQuote(quoteId) {
@@ -454,11 +466,12 @@ function approveQuote(quoteId) {
   });
 }
 
+// Ordens de Serviço (OS)
 function filterOS(status) {
   activeOSFilter = status;
   ['todas', 'aberta', 'funcionamento', 'concluida'].forEach(tab => {
     const btn = document.getElementById(`tab-os-${tab}`);
-    if (btn) btn.className = "flex-1 pb-2 text-center " + (tab === status ? "font-bold border-b-2 border-blue-600 text-blue-600" : "text-slate-500");
+    if (btn) btn.className = "flex-1 py-2 text-center rounded-lg hover:bg-slate-50 transition " + (tab === status ? "font-bold border-b-2 border-blue-600 text-blue-600" : "text-slate-500");
   });
   renderOSList();
 }
@@ -756,7 +769,7 @@ function searchVehicleHistory() {
 // SISTEMA DE ESTOQUE (INVENTORY CRUD)
 // -------------------------------------------------------------
 function handleInventorySubmit(e) {
-  e.preventDefault();
+  if (e) e.preventDefault();
   const partId = document.getElementById('inventory-part-id').value;
   const name = document.getElementById('inventory-name').value.toUpperCase().trim();
   const qty = parseInt(document.getElementById('inventory-qty').value) || 0;
@@ -1156,4 +1169,21 @@ function sharePDFViaSystem(type, id) {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {});
+// -------------------------------------------------------------
+// INICIALIZAÇÃO DE ESCUTADORES DINÂMICOS (SEGURO CONTRA REBUGS)
+// -------------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+  // Menu Responsivo Celular
+  document.getElementById('mobile-menu-open-btn')?.addEventListener('click', () => toggleSidebar(true));
+  document.getElementById('mobile-menu-close-btn')?.addEventListener('click', () => toggleSidebar(false));
+  document.getElementById('sidebar-overlay')?.addEventListener('click', () => toggleSidebar(false));
+
+  // Eventos de Estoque (Evita submits fantasmas)
+  document.getElementById('form-inventory')?.addEventListener('submit', handleInventorySubmit);
+  document.getElementById('inventory-btn-cancel')?.addEventListener('click', clearInventoryForm);
+  document.getElementById('inventory-search')?.addEventListener('input', renderInventory);
+  document.getElementById('inventory-export-pdf-btn')?.addEventListener('click', exportInventoryToPDF);
+
+  // Busca do Histórico Clínico
+  document.getElementById('history-search-btn')?.addEventListener('click', searchVehicleHistory);
+});
