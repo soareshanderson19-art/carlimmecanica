@@ -167,7 +167,7 @@ function handlePasswordChange() {
     .then(() => {
       user.updatePassword(newPass)
         .then(() => {
-          showToast("Senha alteredada com sucesso!", "success");
+          showToast("Senha alterada com sucesso!", "success");
           togglePasswordChange(false);
           document.getElementById('pass-email-confirm').value = '';
           document.getElementById('pass-current').value = '';
@@ -1170,15 +1170,15 @@ function sharePDFViaSystem(type, id) {
 }
 
 // -------------------------------------------------------------
-// INICIALIZAÇÃO DE ESCUTADORES DINÂMICOS (SEGURO CONTRA REBUGS)
+// INICIALIZAÇÃO DE ESCUTADORES DINÂMICOS (FORA DE WRAPPERS DOM)
 // -------------------------------------------------------------
-document.addEventListener("DOMContentLoaded", () => {
+function initEventListeners() {
   // Menu Responsivo Celular
   document.getElementById('mobile-menu-open-btn')?.addEventListener('click', () => toggleSidebar(true));
   document.getElementById('mobile-menu-close-btn')?.addEventListener('click', () => toggleSidebar(false));
   document.getElementById('sidebar-overlay')?.addEventListener('click', () => toggleSidebar(false));
 
-  // Eventos de Estoque (Evita submits fantasmas)
+  // Eventos de Estoque (Evita submits fantasmas e reloads)
   document.getElementById('form-inventory')?.addEventListener('submit', handleInventorySubmit);
   document.getElementById('inventory-btn-cancel')?.addEventListener('click', clearInventoryForm);
   document.getElementById('inventory-search')?.addEventListener('input', renderInventory);
@@ -1186,4 +1186,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Busca do Histórico Clínico
   document.getElementById('history-search-btn')?.addEventListener('click', searchVehicleHistory);
-});
+}
+
+// Execução segura independente do estado de carregamento do arquivo script.js
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", initEventListeners);
+} else {
+  initEventListeners();
+}
