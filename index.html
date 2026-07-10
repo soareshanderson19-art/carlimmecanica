@@ -295,7 +295,7 @@
               </div>
               <div>
                 <span class="text-xs font-bold text-neutral-200 block">Histórico Clínico</span>
-                <span class="text-[10px] text-neutral-500">Buscar por Placa</span>
+                <span class="text-[10px] text-neutral-500">Buscar por Placa, Nome ou Código</span>
               </div>
             </button>
           </section>
@@ -349,6 +349,10 @@
             <div class="bg-neutral-900 p-5 rounded-xl border border-neutral-800 shadow-sm space-y-4 self-start">
               <h3 class="text-xs font-bold text-neutral-200 uppercase border-b pb-2">Novo Cadastro</h3>
               <form id="form-client" class="space-y-3">
+                <div>
+                  <label class="text-[9px] font-bold text-neutral-400 uppercase block mb-1">Código do Cliente</label>
+                  <input type="text" id="client-code" placeholder="Ex: C0001" class="w-full text-xs p-2.5 border border-neutral-700 rounded-lg bg-neutral-800 text-red-500 font-bold outline-none">
+                </div>
                 <div>
                   <label class="text-[9px] font-bold text-neutral-400 uppercase block mb-1">Nome Completo</label>
                   <input type="text" id="client-name" placeholder="Ex: João Silva" required class="w-full text-xs p-2.5 border border-neutral-700 rounded-lg focus:border-red-600 outline-none">
@@ -646,9 +650,9 @@
 
           <!-- Barra de Busca por Placa Estilo ERP -->
           <div class="bg-neutral-900 p-5 rounded-xl border border-neutral-800 shadow-sm space-y-3">
-            <label class="text-[10px] font-bold text-neutral-400 uppercase block">Consulte o prontuário completo de revisões do automóvel</label>
+            <label class="text-[10px] font-bold text-neutral-400 uppercase block">Consulte o prontuário completo de revisões por Placa, Nome ou Código do Cliente</label>
             <div class="flex flex-col sm:flex-row gap-3 max-w-xl">
-              <input type="text" id="history-search-input" placeholder="Ex: XYZ1234" class="flex-1 text-xs p-3 border border-neutral-700 rounded-lg bg-neutral-900 uppercase outline-none focus:border-red-600 font-bold tracking-widest text-lg text-neutral-200">
+              <input type="text" id="history-search-input" placeholder="Ex: XYZ1234, João Silva ou C0001" class="flex-1 text-xs p-3 border border-neutral-700 rounded-lg bg-neutral-900 uppercase outline-none focus:border-red-600 font-bold tracking-widest text-lg text-neutral-200">
               <button id="history-search-btn" class="bg-[#c62828] text-white font-bold text-xs px-6 py-3 sm:py-0 rounded-lg hover:bg-red-700 transition shrink-0">
                 Buscar Prontuário
               </button>
@@ -658,7 +662,7 @@
           <!-- Resultados do Histórico -->
           <div id="history-results" class="space-y-4">
             <div class="bg-neutral-900 p-10 text-center rounded-xl border text-neutral-500 text-xs">
-              Insira uma placa de veículo acima para consultar o histórico clínico de revisões.
+              Insira uma placa, nome ou código do cliente acima para consultar o histórico clínico de revisões.
             </div>
           </div>
         </main>
@@ -741,6 +745,10 @@
             <input type="hidden" id="edit-client-id">
             
             <div class="space-y-3">
+              <div>
+                <label class="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Código do Cliente</label>
+                <input type="text" id="edit-client-code" placeholder="Ex: C0001" class="w-full text-xs p-2.5 border border-neutral-700 rounded-lg bg-neutral-800 text-red-500 font-bold outline-none">
+              </div>
               <div>
                 <label class="text-[10px] font-bold text-neutral-400 uppercase block mb-1">Nome do Cliente</label>
                 <input type="text" id="edit-client-name" class="w-full text-xs p-2.5 border border-neutral-700 rounded-lg outline-none focus:border-red-600">
