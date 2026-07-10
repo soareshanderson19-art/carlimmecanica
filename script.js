@@ -251,10 +251,49 @@ function switchScreen(screenId) {
 }
 
 // Funções de Cliente (Direto no Firebase)
+// Gera o próximo código sequencial de cliente (ex: C0001, C0002...)
+function generateNextClientCode() {
+  let maxNum = 0;
+  clients.forEach(c => {
+    const m = (c.code || "").match(/(\d+)/);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  });
+  return "C" + String(maxNum + 1).padStart(4, '0');
+}
+
+// Atualiza o campinho de código exibido no formulário de cadastro (preview do próximo código sugerido)
+function updateClientCodePreview() {
+  const field = document.getElementById('client-code');
+  if (field) field.value = generateNextClientCode();
+}
+
+// Trava: verifica se já existe outro cliente usando o mesmo código.
+// excludeId serve para, na edição, não comparar o cliente com ele mesmo.
+function isClientCodeDuplicate(code, excludeId = null) {
+  const normalized = String(code || "").trim().toUpperCase();
+  if (!normalized) return false;
+  return clients.some(c => c.id !== excludeId && String(c.code || "").trim().toUpperCase() === normalized);
+}
+
 document.getElementById('form-client')?.addEventListener('submit', function(e) {
   e.preventDefault();
   const rawPlate = document.getElementById('client-plate').value;
+  const codeInput = document.getElementById('client-code').value.trim().toUpperCase();
+
+  if (!codeInput) {
+    showToast("Informe o código do cliente.", "error");
+    return;
+  }
+  if (isClientCodeDuplicate(codeInput)) {
+    showToast("Este código já está em uso por outro cliente.", "error");
+    return;
+  }
+
   const c = {
+    code: codeInput, // Código do cliente definido manualmente
     name: document.getElementById('client-name').value.toUpperCase(),
     phone: document.getElementById('client-phone').value,
     plate: cleanPlateNumber(rawPlate), // Armazena a placa sem hífens ou espaços
@@ -262,7 +301,11 @@ document.getElementById('form-client')?.addEventListener('submit', function(e) {
     carModel: document.getElementById('client-car-model').value.toUpperCase(),
     carYear: document.getElementById('client-car-year').value
   };
-  db.collection("clients").add(c).then(() => { this.reset(); showToast("Salvo!", 'success'); });
+  db.collection("clients").add(c).then(() => {
+    this.reset();
+    updateClientCodePreview();
+    showToast("Salvo! Código: " + c.code, 'success');
+  });
 });
 
 function renderClients() {
@@ -272,7 +315,7 @@ function renderClients() {
     clients.map(c => `
       <div class="bg-neutral-900 p-3 border rounded-xl shadow-sm">
         <div class="flex justify-between">
-          <h4 class="font-bold text-xs">${c.name}</h4>
+          <h4 class="font-bold text-xs">${c.name} <span class="text-red-500 font-black">${c.code ? '· ' + c.code : ''}</span></h4>
           <div>
             <button onclick="openEditModal('${c.id}')" class="text-red-500 text-[10px] mr-2">Editar</button>
             <button onclick="deleteClient('${c.id}')" class="text-red-500 text-[10px]">Excluir</button>
@@ -280,6 +323,7 @@ function renderClients() {
         </div>
         <p class="text-[10px] text-neutral-400">${c.carBrand} ${c.carModel} - ${c.plate}</p>
       </div>`).join("");
+  updateClientCodePreview();
 }
 
 function deleteClient(id) {
@@ -296,6 +340,7 @@ function openEditModal(clientId) {
   const client = clients.find(c => c.id === clientId);
   if (!client) return;
   document.getElementById('edit-client-id').value = clientId;
+  document.getElementById('edit-client-code').value = client.code || "";
   document.getElementById('edit-client-name').value = client.name || "";
   document.getElementById('edit-client-phone').value = client.phone || "";
   document.getElementById('edit-client-car-brand').value = client.carBrand || "";
@@ -312,7 +357,19 @@ function closeEditModal() {
 function saveEditedClient() {
   const id = document.getElementById('edit-client-id').value;
   const rawPlate = document.getElementById('edit-client-plate').value;
+  const codeInput = document.getElementById('edit-client-code').value.trim().toUpperCase();
+
+  if (!codeInput) {
+    showToast("Informe o código do cliente.", "error");
+    return;
+  }
+  if (isClientCodeDuplicate(codeInput, id)) {
+    showToast("Este código já está em uso por outro cliente.", "error");
+    return;
+  }
+
   const updatedData = {
+    code: codeInput,
     name: document.getElementById('edit-client-name').value.toUpperCase(),
     phone: document.getElementById('edit-client-phone').value,
     plate: cleanPlateNumber(rawPlate),
@@ -725,7 +782,7 @@ function resetHistoryScreen() {
   const input = document.getElementById("history-search-input");
   if (input) input.value = "";
   const results = document.getElementById("history-results");
-  if (results) results.innerHTML = `<div class="text-center py-10 text-neutral-500 text-xs">Insira uma placa de veículo acima para consultar o histórico clínico de revisões.</div>`;
+  if (results) results.innerHTML = `<div class="text-center py-10 text-neutral-500 text-xs">Insira uma placa, nome ou código do cliente acima para consultar o histórico clínico de revisões.</div>`;
 }
 
 function searchVehicleHistory() {
@@ -733,29 +790,89 @@ function searchVehicleHistory() {
   const container = document.getElementById("history-results");
   if (!input || !container) return;
 
-  const rawInput = input.value;
-  const plateQueryClean = cleanPlateNumber(rawInput);
-  if (plateQueryClean === "") {
-    showToast("Digite uma placa para pesquisar.", 'warning');
+  const rawInput = input.value.trim();
+  if (rawInput === "") {
+    showToast("Digite uma placa, nome ou código para pesquisar.", 'warning');
     return;
   }
 
-  // Busca normalizada comparando as placas sem hifens ou espaços
-  const matched = clients.filter(c => cleanPlateNumber(c.plate) === plateQueryClean);
-  const client = matched[0];
-  if (!client) {
-    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-500/10 border rounded-xl">Placa "${rawInput.toUpperCase()}" não localizada.</div>`;
+  const queryUpper = rawInput.toUpperCase();
+  const plateQueryClean = cleanPlateNumber(rawInput);
+
+  // 1) Tenta por placa (comparação exata, normalizada sem hífens/espaços)
+  let matched = plateQueryClean ? clients.filter(c => cleanPlateNumber(c.plate) === plateQueryClean) : [];
+
+  // 2) Se não achou por placa, tenta por código do cliente (exato)
+  if (matched.length === 0) {
+    matched = clients.filter(c => (c.code || "").toUpperCase() === queryUpper);
+  }
+
+  // 3) Se ainda não achou, tenta por nome ou código (contendo o termo digitado)
+  if (matched.length === 0) {
+    matched = clients.filter(c =>
+      (c.name || "").toUpperCase().includes(queryUpper) ||
+      (c.code || "").toUpperCase().includes(queryUpper)
+    );
+  }
+
+  if (matched.length === 0) {
+    container.innerHTML = `<div class="text-center py-10 text-red-500 text-xs font-bold bg-red-500/10 border rounded-xl">Nenhum cliente ou veículo encontrado para "${rawInput.toUpperCase()}".</div>`;
     return;
   }
+
+  // Mais de um resultado (ex: busca por nome parcial) -> mostra lista para escolher
+  if (matched.length > 1) {
+    container.innerHTML = `<div class="text-xs font-bold text-neutral-400 uppercase mb-2">Foram encontrados ${matched.length} clientes. Selecione um:</div>` +
+      matched.map(c => `
+        <div onclick="selectHistoryClient('${c.id}')" class="bg-neutral-900 p-3 border rounded-xl cursor-pointer hover:border-red-600 transition flex justify-between items-center">
+          <div>
+            <h4 class="font-bold text-xs">${c.name} <span class="text-red-500 font-black">${c.code ? '· ' + c.code : ''}</span></h4>
+            <p class="text-[10px] text-neutral-400">${c.carBrand || ''} ${c.carModel || ''} - ${c.plate || ''}</p>
+          </div>
+          <span class="text-red-500 text-[10px] font-bold">Ver histórico &rarr;</span>
+        </div>`).join("");
+    return;
+  }
+
+  renderClientHistory(matched[0]);
+}
+
+// Chamado ao clicar em um cliente da lista de resultados múltiplos
+function selectHistoryClient(clientId) {
+  const client = clients.find(c => c.id === clientId);
+  if (client) renderClientHistory(client);
+}
+
+// Renderiza o prontuário completo (linha do tempo de OS) de um cliente específico
+function renderClientHistory(client) {
+  const container = document.getElementById("history-results");
+  if (!container) return;
 
   const vOrders = orders.filter(o => o.clientId === client.id);
+  const codeTag = client.code ? ` <span class="text-red-500">· ${client.code}</span>` : '';
+
   if (vOrders.length === 0) {
-    container.innerHTML = `<div class="bg-neutral-900 p-4 border rounded-xl space-y-2"><h3 class="font-bold text-xs uppercase">${client.name}</h3><p class="text-[10px] text-neutral-400">Placa: ${client.plate}</p><div class="text-center py-6 text-neutral-500 text-xs border-t border-dashed mt-2">Nenhuma OS aberta ainda.</div></div>`;
+    container.innerHTML = `<div class="bg-neutral-900 p-4 border rounded-xl space-y-2"><h3 class="font-bold text-xs uppercase">${client.name}${codeTag}</h3><p class="text-[10px] text-neutral-400">Veículo: ${client.carBrand || ''} ${client.carModel || ''} | Placa: ${client.plate}</p><div class="text-center py-6 text-neutral-500 text-xs border-t border-dashed mt-2">Nenhuma OS aberta ainda.</div></div>`;
     return;
   }
 
   vOrders.sort((a, b) => b.id.localeCompare(a.id));
-  let html = `<div class="bg-neutral-900 p-3 border rounded-xl space-y-1"><h3 class="font-black text-sm uppercase">${client.name}</h3><p class="text-[10px] text-neutral-400">Veículo: ${client.carModel} | Contato: ${client.phone}</p></div><h3 class="text-xs font-bold text-neutral-400 uppercase mt-4 mb-2">Linha do Tempo</h3><div class="space-y-3">`;
+
+  // Resumo: total de visitas e total gasto pelo cliente
+  const totalGasto = vOrders.reduce((acc, os) => {
+    const sList = os.services || [];
+    const pList = os.parts || [];
+    return acc + sList.reduce((a, s) => a + s.price, 0) + pList.reduce((a, p) => a + (p.price * p.qty), 0);
+  }, 0);
+
+  let html = `<div class="bg-neutral-900 p-3 border rounded-xl space-y-1">
+      <h3 class="font-black text-sm uppercase">${client.name}${codeTag}</h3>
+      <p class="text-[10px] text-neutral-400">Veículo: ${client.carBrand || ''} ${client.carModel || ''} (${client.carYear || 's/ano'}) | Placa: ${client.plate} | Contato: ${client.phone}</p>
+      <div class="flex gap-4 pt-2 border-t border-dashed mt-2">
+        <span class="text-[10px] text-neutral-400">Total de visitas: <span class="font-black text-neutral-100">${vOrders.length}</span></span>
+        <span class="text-[10px] text-neutral-400">Total gasto: <span class="font-black text-emerald-500">R$ ${totalGasto.toFixed(2)}</span></span>
+      </div>
+    </div><h3 class="text-xs font-bold text-neutral-400 uppercase mt-4 mb-2">Linha do Tempo</h3><div class="space-y-3">`;
   vOrders.forEach(os => {
     const sList = os.services || [];
     const pList = os.parts || [];
