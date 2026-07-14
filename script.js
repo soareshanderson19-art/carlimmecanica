@@ -1,6 +1,6 @@
 // Configurações Oficiais do Firebase
 const OFICINA_WHATSAPP = "5562985153191";
-const OFICINA_NOME = "Mecânica do Carlim";
+const OFICINA_NOME = "Carlim Auto Center";
 const OFICINA_ENDERECO = "Manutenção Automotiva Geral - Carlim";
 
 const firebaseConfig = {
@@ -26,6 +26,26 @@ let inventory = [];
 let tempQuoteItems = { services: [], parts: [] };
 let activeOSDetailId = null;
 let activeOSFilter = "todas";
+
+// Pré-carrega a logo da Carlim Auto Center (convertida para Base64) para uso nos cabeçalhos dos PDFs
+let LOGO_DATA_URL = null;
+const logoReadyPromise = new Promise((resolve) => {
+  const img = new Image();
+  img.onload = function () {
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      LOGO_DATA_URL = canvas.toDataURL('image/png');
+    } catch (e) {
+      LOGO_DATA_URL = null;
+    }
+    resolve();
+  };
+  img.onerror = () => resolve();
+  img.src = 'carlim-logo.png';
+});
 
 // Monitor de Estado de Autenticação (Abre e fecha as telas com base no login)
 auth.onAuthStateChanged(user => {
@@ -53,6 +73,46 @@ function formatSeqNumber(num) {
 function cleanPlateNumber(plate) {
   return String(plate || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
+
+// Formata CPF (000.000.000-00) ou CNPJ (00.000.000/0000-00) conforme a quantidade de dígitos
+function formatCpfCnpj(value) {
+  const digits = String(value || "").replace(/\D/g, "").slice(0, 14);
+  if (digits.length <= 11) {
+    return digits
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d)/, "$1.$2")
+      .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+  }
+  return digits
+    .replace(/(\d{2})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1/$2")
+    .replace(/(\d{4})(\d{1,2})$/, "$1-$2");
+}
+
+// Alterna os rótulos e placeholders dos campos de Nome/Documento entre Pessoa Física e Pessoa Jurídica
+// prefix: "client" (cadastro novo) ou "edit-client" (modal de edição)
+function togglePersonTypeFields(prefix) {
+  const type = document.getElementById(`${prefix}-person-type`)?.value || "fisica";
+  const nameLabel = document.getElementById(`${prefix}-name-label`);
+  const docLabel = document.getElementById(`${prefix}-document-label`);
+  const nameInput = document.getElementById(`${prefix}-name`);
+  const docInput = document.getElementById(`${prefix}-document`);
+  if (type === "juridica") {
+    if (nameLabel) nameLabel.textContent = "Nome da Empresa / Razão Social";
+    if (docLabel) docLabel.textContent = "CNPJ";
+    if (nameInput) nameInput.placeholder = "Ex: Auto Peças Silva Ltda";
+    if (docInput) docInput.placeholder = "Ex: 00.000.000/0000-00";
+  } else {
+    if (nameLabel) nameLabel.textContent = "Nome Completo";
+    if (docLabel) docLabel.textContent = "CPF";
+    if (nameInput) nameInput.placeholder = "Ex: João Silva";
+    if (docInput) docInput.placeholder = "Ex: 000.000.000-00";
+  }
+}
+
+document.getElementById('client-document')?.addEventListener('input', function () { this.value = formatCpfCnpj(this.value); });
+document.getElementById('edit-client-document')?.addEventListener('input', function () { this.value = formatCpfCnpj(this.value); });
 
 // Controle de Barra Lateral Responsiva
 function toggleSidebar(show) {
@@ -294,7 +354,9 @@ document.getElementById('form-client')?.addEventListener('submit', function(e) {
 
   const c = {
     code: codeInput, // Código do cliente definido manualmente
+    personType: document.getElementById('client-person-type').value || "fisica", // fisica ou juridica
     name: document.getElementById('client-name').value.toUpperCase(),
+    document: document.getElementById('client-document').value.trim(), // CPF ou CNPJ
     phone: document.getElementById('client-phone').value,
     plate: cleanPlateNumber(rawPlate), // Armazena a placa sem hífens ou espaços
     carBrand: document.getElementById('client-car-brand').value.toUpperCase(),
@@ -303,6 +365,8 @@ document.getElementById('form-client')?.addEventListener('submit', function(e) {
   };
   db.collection("clients").add(c).then(() => {
     this.reset();
+    document.getElementById('client-person-type').value = 'fisica';
+    togglePersonTypeFields('client');
     updateClientCodePreview();
     showToast("Salvo! Código: " + c.code, 'success');
   });
@@ -321,6 +385,7 @@ function renderClients() {
             <button onclick="deleteClient('${c.id}')" class="text-red-500 text-[10px]">Excluir</button>
           </div>
         </div>
+        <p class="text-[10px] text-neutral-500">${c.personType === 'juridica' ? 'Pessoa Jurídica' : 'Pessoa Física'}${c.document ? ' · ' + c.document : ''}</p>
         <p class="text-[10px] text-neutral-400">${c.carBrand} ${c.carModel} - ${c.plate}</p>
       </div>`).join("");
   updateClientCodePreview();
@@ -341,12 +406,15 @@ function openEditModal(clientId) {
   if (!client) return;
   document.getElementById('edit-client-id').value = clientId;
   document.getElementById('edit-client-code').value = client.code || "";
+  document.getElementById('edit-client-person-type').value = client.personType || "fisica";
   document.getElementById('edit-client-name').value = client.name || "";
+  document.getElementById('edit-client-document').value = client.document || "";
   document.getElementById('edit-client-phone').value = client.phone || "";
   document.getElementById('edit-client-car-brand').value = client.carBrand || "";
   document.getElementById('edit-client-car-model').value = client.carModel || "";
   document.getElementById('edit-client-plate').value = client.plate || "";
   document.getElementById('edit-client-car-year').value = client.carYear || "";
+  togglePersonTypeFields('edit-client');
   document.getElementById('modal-edit-client').classList.remove('hidden');
 }
 
@@ -370,7 +438,9 @@ function saveEditedClient() {
 
   const updatedData = {
     code: codeInput,
+    personType: document.getElementById('edit-client-person-type').value || "fisica",
     name: document.getElementById('edit-client-name').value.toUpperCase(),
+    document: document.getElementById('edit-client-document').value.trim(),
     phone: document.getElementById('edit-client-phone').value,
     plate: cleanPlateNumber(rawPlate),
     carBrand: document.getElementById('edit-client-car-brand').value.toUpperCase(),
@@ -440,17 +510,11 @@ function saveAndPipelineQuote() {
   quotes.forEach(q => { if (q.seqNumber && q.seqNumber > maxSeq) maxSeq = q.seqNumber; });
   const nextSeq = maxSeq + 1;
   const newId = "quote-" + Date.now().toString();
+  const observations = document.getElementById('quote-observations')?.value.trim() || "";
   const newQuote = {
-    clientId, problem: problem || "Ajustes preventivos.", date: new Date().toLocaleDateString('pt-BR'), status: "aguardando", paymentMethod, odometer, seqNumber: nextSeq,
+    clientId, problem: problem || "Ajustes preventivos.", date: new Date().toLocaleDateString('pt-BR'), status: "aguardando", paymentMethod, odometer, seqNumber: nextSeq, observations,
     inspection: {
-      fuel: document.getElementById('quote-fuel').value,
-      lataria: document.getElementById('quote-chk-lataria').checked,
-      estepe: document.getElementById('quote-chk-estepe').checked,
-      ferramentas: document.getElementById('quote-chk-ferramentas').checked,
-      triangulo: document.getElementById('quote-chk-triangulo').checked,
-      luzes: document.getElementById('quote-chk-luzes').checked,
-      radio: document.getElementById('quote-chk-radio').checked,
-      notes: document.getElementById('quote-inspection-notes').value || "Sem observações."
+      fuel: document.getElementById('quote-fuel').value
     },
     services: [...tempQuoteItems.services], parts: [...tempQuoteItems.parts]
   };
@@ -499,13 +563,9 @@ function renderQuoteFormItems() {
 
 function resetQuoteForm() {
   tempQuoteItems = { services: [], parts: [] };
-  ['quote-service-desc', 'quote-service-price', 'quote-part-desc', 'quote-part-price', 'quote-problem-desc', 'quote-inspection-notes', 'quote-odometer'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  ['quote-service-desc', 'quote-service-price', 'quote-part-desc', 'quote-part-price', 'quote-problem-desc', 'quote-observations', 'quote-odometer'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('quote-part-qty').value = '1';
   document.getElementById('quote-fuel').value = '1/2';
-  ['quote-chk-lataria', 'quote-chk-estepe', 'quote-chk-ferramentas', 'quote-chk-triangulo', 'quote-chk-luzes', 'quote-chk-radio'].forEach(id => {
-    const chk = document.getElementById(id);
-    if (chk) chk.checked = false;
-  });
   renderQuoteFormItems();
 }
 
@@ -515,8 +575,8 @@ function approveQuote(quoteId) {
   db.collection("quotes").doc(quoteId).update({ status: "aprovado" }).then(() => {
     showToast("Orçamento aprovado!", 'success');
     const newOS = {
-      clientId: quote.clientId, problem: `[APROVADO] ${quote.problem}`, date: new Date().toLocaleDateString('pt-BR'), status: "aberta", paymentMethod: quote.paymentMethod || "pix", odometer: quote.odometer || "0", seqNumber: quote.seqNumber || 1,
-      inspection: quote.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." },
+      clientId: quote.clientId, problem: `[APROVADO] ${quote.problem}`, date: new Date().toLocaleDateString('pt-BR'), status: "aberta", paymentMethod: quote.paymentMethod || "pix", odometer: quote.odometer || "0", seqNumber: quote.seqNumber || 1, observations: quote.observations || "",
+      inspection: quote.inspection || { fuel: "1/2" },
       services: [...quote.services], parts: [...quote.parts]
     };
     db.collection("orders").doc("OS-" + quoteId).set(newOS).then(() => switchScreen('os-list'));
@@ -606,7 +666,7 @@ function renderOSDetailContent() {
   const servicesList = os.services || [];
   const partsList = os.parts || [];
   const tot = servicesList.reduce((a, s) => a + s.price, 0) + partsList.reduce((a, p) => a + (p.price * p.qty), 0);
-  const insp = os.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." };
+  const insp = os.inspection || { fuel: "1/2" };
 
   container.innerHTML = `
     <div class="bg-neutral-950 p-3 rounded-lg text-xs space-y-1">
@@ -616,18 +676,10 @@ function renderOSDetailContent() {
       <p class="text-[11px] text-neutral-400 italic">"${os.problem}"</p>
     </div>
     <div class="bg-black p-2.5 rounded-lg border text-xs space-y-1">
-      <h4 class="font-bold text-[10px] text-neutral-400 uppercase">Laudo de Vistoria</h4>
-      <p>Combustível: <strong>${insp.fuel.toUpperCase()}</strong></p>
-      <div class="grid grid-cols-2 gap-1 text-[10px] text-neutral-300">
-        <div>Lataria: <strong>${insp.lataria ? 'SIM' : 'NÃO'}</strong></div>
-        <div>Estepe: <strong>${insp.estepe ? 'SIM' : 'NÃO'}</strong></div>
-        <div>Ferramentas: <strong>${insp.ferramentas ? 'SIM' : 'NÃO'}</strong></div>
-        <div>Triângulo: <strong>${insp.triangulo ? 'SIM' : 'NÃO'}</strong></div>
-        <div>Luzes: <strong>${insp.luzes ? 'SIM' : 'NÃO'}</strong></div>
-        <div>Rádio: <strong>${insp.radio ? 'SIM' : 'NÃO'}</strong></div>
-      </div>
-      <p class="text-[10px] italic border-t pt-1 mt-1">Obs: "${insp.notes}"</p>
+      <h4 class="font-bold text-[10px] text-neutral-400 uppercase">Combustível na Entrada</h4>
+      <p>Nível: <strong>${(insp.fuel || "1/2").toUpperCase()}</strong></p>
     </div>
+    ${os.observations ? `<div class="bg-black p-2.5 rounded-lg border text-xs space-y-1"><h4 class="font-bold text-[10px] text-neutral-400 uppercase">Observações do Orçamento</h4><p class="text-[11px] text-neutral-300">${os.observations}</p></div>` : ''}
     <div class="flex gap-2 flex-wrap">
       <select onchange="updateOSStatus(this.value)" class="flex-1 min-w-[120px] text-xs p-2 border rounded bg-neutral-900">
         <option value="aberta" ${os.status === 'aberta' ? 'selected' : ''}>Em Aberto</option>
@@ -970,33 +1022,38 @@ function renderInventory() {
   `).join("");
 }
 
-function exportInventoryToPDF() {
+async function exportInventoryToPDF() {
   const jsPDFObj = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
   if (!jsPDFObj) { showToast("Erro: Biblioteca jsPDF não carregada.", 'error'); return; }
 
   showToast("Gerando PDF do estoque...", 'info', 2000);
+  await logoReadyPromise;
 
   const doc = new jsPDFObj('p', 'mm', 'a4');
   let y = 15;
+  const textStartX = LOGO_DATA_URL ? 34 : 15;
+  if (LOGO_DATA_URL) {
+    try { doc.addImage(LOGO_DATA_URL, 'PNG', 15, 7, 16, 16); } catch (e) {}
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.setTextColor(30, 58, 138); // Cor azul escura padrão do sistema
-  doc.text(OFICINA_NOME.toUpperCase(), 15, y);
+  doc.text(OFICINA_NOME.toUpperCase(), textStartX, y);
 
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  doc.text("ESTOQUE DE PECAS", 195, y, { align: "right" });
+  doc.text("ESTOQUE DE PEÇAS", 195, y, { align: "right" });
 
   y += 6;
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text(OFICINA_ENDERECO, 15, y);
+  doc.text(OFICINA_ENDERECO, textStartX, y);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text(`DATA DE EMISSAO: ${new Date().toLocaleDateString('pt-BR')}`, 195, y, { align: "right" });
+  doc.text(`DATA DE EMISSÃO: ${new Date().toLocaleDateString('pt-BR')}`, 195, y, { align: "right" });
 
   y += 4;
   doc.setDrawColor(30, 58, 138);
@@ -1010,7 +1067,7 @@ function exportInventoryToPDF() {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8.5);
   doc.setTextColor(51, 65, 85);
-  doc.text("Descricao da Peca / Codigo", 18, y + 4.5);
+  doc.text("Descrição da Peça / Código", 18, y + 4.5);
   doc.text("Quantidade", 120, y + 4.5, { align: "center" });
   doc.text("Valor Unit.", 155, y + 4.5, { align: "right" });
   doc.text("Valor Total", 192, y + 4.5, { align: "right" });
@@ -1025,7 +1082,7 @@ function exportInventoryToPDF() {
   if (inventory.length === 0) {
     y += 7;
     doc.rect(15, y, 180, 7);
-    doc.text("Nenhuma peca cadastrada no estoque.", 18, y + 4.5);
+    doc.text("Nenhuma peça cadastrada no estoque.", 18, y + 4.5);
   } else {
     inventory.forEach(p => {
       const itemTotal = p.qty * p.price;
@@ -1040,7 +1097,7 @@ function exportInventoryToPDF() {
         doc.setFillColor(241, 245, 249);
         doc.rect(15, y, 180, 7, "F");
         doc.setFont("helvetica", "bold");
-        doc.text("Descricao da Peca / Codigo", 18, y + 4.5);
+        doc.text("Descrição da Peça / Código", 18, y + 4.5);
         doc.text("Quantidade", 120, y + 4.5, { align: "center" });
         doc.text("Valor Unit.", 155, y + 4.5, { align: "right" });
         doc.text("Valor Total", 192, y + 4.5, { align: "right" });
@@ -1070,13 +1127,13 @@ function exportInventoryToPDF() {
   doc.setFontSize(14);
   doc.text(`R$ ${grandTotal.toFixed(2)}`, 135, y + 15);
 
-  const filename = `estoque_mecanica_carlim_${new Date().toISOString().slice(0,10)}.pdf`;
+  const filename = `estoque_carlim_auto_center_${new Date().toISOString().slice(0,10)}.pdf`;
   const pdfBlob = doc.output('blob');
   const pdfFile = new File([pdfBlob], filename, { type: "application/pdf" });
   const filesArray = [pdfFile];
 
   if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-    navigator.share({ files: filesArray, title: 'Estoque de Peças', text: `Mecânica do Carlim - PDF.` }).catch(() => {});
+    navigator.share({ files: filesArray, title: 'Estoque de Peças', text: `${OFICINA_NOME} - PDF.` }).catch(() => {});
   } else {
     showToast("Baixando arquivo...", 'warning');
     doc.save(filename);
@@ -1084,7 +1141,7 @@ function exportInventoryToPDF() {
 }
 
 // PDF Creator (Clientes/OS)
-function sharePDFViaSystem(type, id) {
+async function sharePDFViaSystem(type, id) {
   const isQuote = type === 'quote';
   const docData = isQuote ? quotes.find(q => q.id === id) : orders.find(o => o.id === id);
   if (!docData) { showToast("Documento não encontrado.", 'error'); return; }
@@ -1096,7 +1153,9 @@ function sharePDFViaSystem(type, id) {
   const activeParts = ((isQuote && associatedOS) ? associatedOS.parts : docData.parts) || [];
   const paymentMethod = (isQuote && associatedOS) ? (associatedOS.paymentMethod || "pix") : (docData.paymentMethod || "pix");
   const odometer = (isQuote && associatedOS) ? (associatedOS.odometer || "0") : (docData.odometer || "0");
-  const insp = (isQuote && associatedOS) ? (associatedOS.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." }) : (docData.inspection || { fuel: "1/2", lataria: false, estepe: false, ferramentas: false, triangulo: false, luzes: false, radio: false, notes: "Sem vistoria." });
+  const insp = (isQuote && associatedOS) ? (associatedOS.inspection || { fuel: "1/2" }) : (docData.inspection || { fuel: "1/2" });
+  const observations = docData.observations || (associatedOS && associatedOS.observations) || "";
+  const isPJ = client.personType === 'juridica';
 
   const sTotal = activeServices.reduce((acc, curr) => acc + curr.price, 0);
   const pTotal = activeParts.reduce((acc, curr) => acc + (curr.price * curr.qty), 0);
@@ -1105,21 +1164,26 @@ function sharePDFViaSystem(type, id) {
   const seqNum = docData.seqNumber || 1;
   const formattedSeq = formatSeqNumber(seqNum);
 
-  const docTitle = isQuote ? "ORCAMENTO DE REPARO" : "RECIBO DE SERVICO";
-  const docBadge = isQuote ? "Estimativa" : "Servico Concluido";
+  const docTitle = isQuote ? "ORÇAMENTO DE REPARO" : "RECIBO DE SERVIÇO";
+  const docBadge = isQuote ? "Estimativa" : "Serviço Concluído";
 
   const jsPDFObj = window.jspdf ? window.jspdf.jsPDF : window.jsPDF;
   if (!jsPDFObj) { showToast("Erro: Biblioteca jsPDF não carregada.", 'error'); return; }
 
   showToast("Gerando PDF oficial...", 'info', 2000);
+  await logoReadyPromise;
 
   const doc = new jsPDFObj('p', 'mm', 'a4');
   const primaryColor = isQuote ? [30, 58, 138] : [16, 185, 129];
 
   let y = 15;
+  const textStartX = LOGO_DATA_URL ? 34 : 15;
+  if (LOGO_DATA_URL) {
+    try { doc.addImage(LOGO_DATA_URL, 'PNG', 15, 7, 16, 16); } catch (e) {}
+  }
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text(OFICINA_NOME.toUpperCase(), 15, y);
+  doc.text(OFICINA_NOME.toUpperCase(), textStartX, y);
   
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
@@ -1129,7 +1193,7 @@ function sharePDFViaSystem(type, id) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text(OFICINA_ENDERECO, 15, y);
+  doc.text(OFICINA_ENDERECO, textStartX, y);
   
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
@@ -1140,7 +1204,7 @@ function sharePDFViaSystem(type, id) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(9);
   doc.setTextColor(100, 116, 139);
-  doc.text(`WhatsApp: ${OFICINA_WHATSAPP}`, 15, y);
+  doc.text(`WhatsApp: ${OFICINA_WHATSAPP}`, textStartX, y);
   doc.text(`ID: ${formattedSeq} | Data: ${docData.date}`, 195, y, { align: "right" });
 
   y += 4;
@@ -1153,69 +1217,53 @@ function sharePDFViaSystem(type, id) {
   
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
-  doc.rect(15, y, 87, 24, "FD");
+  doc.rect(15, y, 87, 30, "FD");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text("PROPRIETARIO / CLIENTE", 18, y + 5);
+  doc.text(isPJ ? "CLIENTE PESSOA JURÍDICA" : "PROPRIETÁRIO / CLIENTE", 18, y + 5);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
-  doc.text(`Nome: ${client.name}`, 18, y + 11);
+  doc.text(`${isPJ ? "Empresa" : "Nome"}: ${client.name}`, 18, y + 11);
   doc.text(`Telefone: ${client.phone}`, 18, y + 18);
+  doc.text(`${isPJ ? "CNPJ" : "CPF"}: ${client.document || "Não informado"}`, 18, y + 25);
 
   doc.setDrawColor(203, 213, 225);
   doc.setFillColor(248, 250, 252);
-  doc.rect(108, y, 87, 24, "FD");
+  doc.rect(108, y, 87, 30, "FD");
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   doc.setTextColor(71, 85, 105);
-  doc.text("DADOS DO VEICULO", 111, y + 5);
+  doc.text("DADOS DO VEÍCULO", 111, y + 5);
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
   doc.text(`Modelo: ${client.carBrand || ""} ${client.carModel || ""} (${client.carYear || ""})`, 111, y + 11);
-  doc.text(`Placa: ${client.plate || ""} | KM Entrada: ${odometer} KM`, 111, y + 18);
+  doc.text(`Placa: ${client.plate || ""}`, 111, y + 18);
+  doc.text(`KM Entrada: ${odometer} KM`, 111, y + 25);
 
-  y += 28;
+  y += 34;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(15, 23, 42);
   doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
   doc.setLineWidth(0.8);
   doc.line(15, y - 3, 15, y + 1);
-  doc.text("VISTORIA DE ENTRADA (LAUDO)", 18, y);
+  doc.text(`COMBUSTÍVEL NA ENTRADA: ${insp.fuel ? insp.fuel.toUpperCase() : '1/2'} DE TANQUE`, 18, y);
 
-  y += 3;
-  doc.setDrawColor(203, 213, 225);
-  doc.setLineWidth(0.15);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  
-  doc.rect(15, y, 90, 6); doc.text(`Combustivel: ${insp.fuel ? insp.fuel.toUpperCase() : '1/2'}`, 18, y + 4);
-  doc.rect(105, y, 90, 6); doc.text(`Lataria sem riscos: ${insp.lataria ? 'SIM' : 'NAO'}`, 108, y + 4);
-  y += 6;
-  doc.rect(15, y, 90, 6); doc.text(`Estepe Presente: ${insp.estepe ? 'SIM' : 'NAO'}`, 18, y + 4);
-  doc.rect(105, y, 90, 6); doc.text(`Macaco / Chaves de roda: ${insp.ferramentas ? 'SIM' : 'NAO'}`, 108, y + 4);
-  y += 6;
-  doc.rect(15, y, 90, 6); doc.text(`Triangulo de seguranca: ${insp.triangulo ? 'SIM' : 'NAO'}`, 18, y + 4);
-  doc.rect(105, y, 90, 6); doc.text(`Luzes e painel Ok: ${insp.luzes ? 'SIM' : 'NAO'}`, 108, y + 4);
-  y += 6;
-  doc.rect(15, y, 90, 6); doc.text(`Som / Radio Presente: ${insp.radio ? 'SIM' : 'NAO'}`, 18, y + 4);
-  doc.rect(105, y, 90, 6); doc.text(`Observacoes: ${insp.notes || 'Sem observacoes.'}`, 108, y + 4);
-
-  y += 12;
+  y += 8;
   doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-  doc.line(15, y - 3, 15, y + 1); doc.text("1. SERVICOS DE MAO DE OBRA", 18, y);
+  doc.line(15, y - 3, 15, y + 1); doc.text("1. SERVIÇOS DE MÃO DE OBRA", 18, y);
 
   y += 3;
   doc.setFillColor(241, 245, 249); doc.rect(15, y, 180, 6, "F");
   doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(51, 65, 85);
-  doc.text("Procedimento Tecnico", 18, y + 4); doc.text("Valor", 195, y + 4, { align: "right" });
+  doc.text("Procedimento Técnico", 18, y + 4); doc.text("Valor", 195, y + 4, { align: "right" });
   doc.setFont("helvetica", "normal"); doc.setTextColor(15, 23, 42);
   
   if (activeServices.length === 0) {
-    y += 6; doc.rect(15, y, 180, 6); doc.text("Nenhum servico registrado.", 18, y + 4);
+    y += 6; doc.rect(15, y, 180, 6); doc.text("Nenhum serviço registrado.", 18, y + 4);
   } else {
     activeServices.forEach(s => {
       y += 6; doc.rect(15, y, 180, 6); doc.text(s.desc, 18, y + 4);
@@ -1225,17 +1273,17 @@ function sharePDFViaSystem(type, id) {
 
   y += 12;
   doc.setFont("helvetica", "bold"); doc.setFontSize(10);
-  doc.line(15, y - 3, 15, y + 1); doc.text("2. PECAS E COMPONENTES APLICADOS", 18, y);
+  doc.line(15, y - 3, 15, y + 1); doc.text("2. PEÇAS E COMPONENTES APLICADOS", 18, y);
 
   y += 3;
   doc.setFillColor(241, 245, 249); doc.rect(15, y, 180, 6, "F");
   doc.setFont("helvetica", "bold"); doc.setFontSize(8.5); doc.setTextColor(51, 65, 85);
-  doc.text("Peca / Descricao", 18, y + 4); doc.text("Qtd", 130, y + 4, { align: "center" });
-  doc.text("Unitario", 160, y + 4, { align: "right" }); doc.text("Subtotal", 195, y + 4, { align: "right" });
+  doc.text("Peça / Descrição", 18, y + 4); doc.text("Qtd", 130, y + 4, { align: "center" });
+  doc.text("Unitário", 160, y + 4, { align: "right" }); doc.text("Subtotal", 195, y + 4, { align: "right" });
   doc.setFont("helvetica", "normal"); doc.setTextColor(15, 23, 42);
 
   if (activeParts.length === 0) {
-    y += 6; doc.rect(15, y, 180, 6); doc.text("Nenhuma peca aplicada.", 18, y + 4);
+    y += 6; doc.rect(15, y, 180, 6); doc.text("Nenhuma peça aplicada.", 18, y + 4);
   } else {
     activeParts.forEach(p => {
       y += 6; doc.rect(15, y, 180, 6); doc.text(p.desc, 18, y + 4);
@@ -1246,13 +1294,14 @@ function sharePDFViaSystem(type, id) {
   }
 
   y += 12;
+  if (y > 245) { doc.addPage(); y = 15; }
   doc.setDrawColor(203, 213, 225); doc.rect(15, y, 110, 24);
   doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
   doc.text("FORMAS DE PAGAMENTO", 18, y + 5);
   doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
-  doc.text(`Metodo Escolhido: ${paymentMethod.toUpperCase()}`, 18, y + 11);
+  doc.text(`Método Escolhido: ${paymentMethod.toUpperCase()}`, 18, y + 11);
   doc.setFontSize(7.5); doc.setTextColor(100, 116, 139);
-  const terms = isQuote ? "* Nota: Estimativa sujeita a atualizacoes. Validade: 10 dias." : "Garantia legal de 90 dias sobre mao de obra e pecas descritas nesta OS, CDC.";
+  const terms = isQuote ? "* Nota: Estimativa sujeita a atualizações. Validade: 10 dias." : "Garantia legal de 90 dias sobre mão de obra e peças descritas nesta OS, CDC.";
   doc.text(doc.splitTextToSize(terms, 104), 18, y + 17);
 
   doc.setFillColor(248, 250, 252); doc.rect(130, y, 65, 24, "FD");
@@ -1260,15 +1309,34 @@ function sharePDFViaSystem(type, id) {
   doc.text("VALOR TOTAL:", 135, y + 8);
   doc.setFontSize(16); doc.text(`R$ ${total.toFixed(2)}`, 135, y + 18);
 
+  y += 24;
+
+  if (observations) {
+    y += 8;
+    if (y > 260) { doc.addPage(); y = 15; }
+    doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+    doc.setDrawColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.setLineWidth(0.8);
+    doc.line(15, y - 3, 15, y + 1);
+    doc.text("OBSERVAÇÕES", 18, y);
+    y += 4;
+    doc.setFont("helvetica", "normal"); doc.setFontSize(8.5); doc.setTextColor(51, 65, 85);
+    const obsLines = doc.splitTextToSize(observations, 175);
+    if (y + (obsLines.length * 4) > 280) { doc.addPage(); y = 15; }
+    doc.text(obsLines, 18, y);
+    y += obsLines.length * 4;
+  }
+
   if (!isQuote) {
-    y += 35;
+    y += 20;
+    if (y > 270) { doc.addPage(); y = 15; }
     doc.line(15, y, 95, y); doc.setFont("helvetica", "bold"); doc.setFontSize(8); doc.setTextColor(15, 23, 42);
     doc.text(client.name.substring(0, 35), 15, y + 4);
     doc.setFont("helvetica", "normal"); doc.setTextColor(100, 116, 139); doc.text("Assinatura do Cliente / Recebimento", 15, y + 8);
 
     doc.line(115, y, 195, y); doc.setFont("helvetica", "bold"); doc.setTextColor(15, 23, 42);
-    doc.text("Mecanica do Carlim", 115, y + 4);
-    doc.setFont("helvetica", "normal"); doc.setTextColor(100, 116, 139); doc.text("Assinatura do Responsavel Tecnico", 115, y + 8);
+    doc.text(OFICINA_NOME, 115, y + 4);
+    doc.setFont("helvetica", "normal"); doc.setTextColor(100, 116, 139); doc.text("Assinatura do Responsável Técnico", 115, y + 8);
   }
 
   const formattedSeqFilename = String(seqNum).padStart(2, '0');
@@ -1280,7 +1348,7 @@ function sharePDFViaSystem(type, id) {
   const filesArray = [pdfFile];
 
   if (navigator.canShare && navigator.canShare({ files: filesArray })) {
-    navigator.share({ files: filesArray, title: isQuote ? 'Orçamento de Reparo' : 'Recibo de Serviço', text: `Mecânica do Carlim - PDF.` }).catch(() => {});
+    navigator.share({ files: filesArray, title: isQuote ? 'Orçamento de Reparo' : 'Recibo de Serviço', text: `${OFICINA_NOME} - PDF.` }).catch(() => {});
   } else {
     showToast("Baixando arquivo...", 'warning'); doc.save(filename);
   }
